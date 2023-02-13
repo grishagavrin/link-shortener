@@ -39,8 +39,9 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		// w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		stringURL := r.FormValue("url")
+		stringURL := r.FormValue("URL")
 		if stringURL == "" {
+
 			http.Error(w, "MY ERROR!!! The url parameter is missing", http.StatusBadRequest)
 			return
 		}
