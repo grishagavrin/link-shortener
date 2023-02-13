@@ -51,7 +51,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 
 		dbURL := storage.AddURL(stringURL)
 
-		myString := fmt.Sprintf("http://127.0.0.1/?id=%s", dbURL.Id)
+		myString := fmt.Sprintf("http://127.0.0.1/?url=%s", dbURL.Id)
 		w.Write([]byte(myString))
 	}
 }
