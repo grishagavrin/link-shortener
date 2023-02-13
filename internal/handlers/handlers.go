@@ -51,14 +51,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 
 		dbURL := storage.AddURL(stringURL)
 
-		myString := fmt.Sprintf("http://127.0.0.1:8080/?id=%s", dbURL.Id)
-		// myUrl, urlParseErr := url.Parse(myString)
-
-		// if urlParseErr != nil {
-		// 	fmt.Println("URL PARSE ERR: ", urlParseErr)
-		// }
-
-		// fmt.Println("MYURL ", myUrl)
+		myString := fmt.Sprintf("http://localhost:8080/?id=%s", dbURL.Id)
 
 		w.Write([]byte(myString))
 	}
