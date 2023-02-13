@@ -50,8 +50,12 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		dbURL := storage.AddURL(stringURL)
+		// resp := strconv.Itoa(dbURL.Id)
 
-		resp, err := json.Marshal(dbURL)
+		resp, err := json.Marshal(dbURL.Id)
+
+		// res := strconv.Itoa(dbURL.Id)
+
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
