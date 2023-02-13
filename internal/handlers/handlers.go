@@ -10,24 +10,20 @@ import (
 var DB = map[int]string{}
 
 func CommonHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "Uncorrected route", http.StatusBadRequest)
-		return
-	}
+	// if r.URL.Path != "/" {
+	// 	http.Error(w, "Uncorrected route", http.StatusBadRequest)
+	// 	return
+	// }
 
 	switch r.Method {
 	case "GET":
-		q := r.URL.Query().Get("id")
+		q := r.URL.Path[1:]
+
+		// q := r.URL.Query().Get("id")
 		if q == "" {
 			http.Error(w, "The id parameter is missing", http.StatusBadRequest)
 			return
 		}
-
-		// intID, err := strconv.Atoi(r.URL.Query().Get("id"))
-		// if err != nil {
-		// 	http.Error(w, err.Error(), 500)
-		// 	return
-		// }
 
 		founded, err := storage.GetURLById(q)
 
@@ -51,7 +47,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 
 		dbURL := storage.AddURL(stringURL)
 
-		myString := fmt.Sprintf("http://localhost:8080/?id=%s", dbURL.Id)
+		myString := fmt.Sprintf("http://localhost:8080/%s", dbURL.Id)
 
 		w.Write([]byte(myString))
 	}
