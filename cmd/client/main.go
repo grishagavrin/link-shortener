@@ -62,12 +62,12 @@ func main() {
 	// и печатаем его
 	fmt.Println(string(body))
 
-	// shortenURL := string(body)
-	// myurl, urlParseErr := url.Parse(shortenURL)
-	// if urlParseErr != nil {
-	// 	fmt.Println("urlParseErr", urlParseErr)
-	// }
+	shortenURL := string(body)
+	myurl, urlParseErr := url.Parse(shortenURL)
+	if urlParseErr != nil {
+		fmt.Println("urlParseErr", urlParseErr)
+	}
 
-	// fmt.Println("myURL", myurl)
+	fmt.Println("myURL", myurl)
 
 }

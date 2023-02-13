@@ -41,7 +41,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 
 		stringURL := r.FormValue("url")
 		if stringURL == "" {
-			http.Error(w, "The url parameter is missing", http.StatusBadRequest)
+			http.Error(w, "MY ERROR!!! The url parameter is missing", http.StatusBadRequest)
 			return
 		}
 
