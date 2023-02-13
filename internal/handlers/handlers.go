@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/grishagavrin/link-shortener/internal/storage"
@@ -40,7 +40,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case "POST":
-		w.Header().Set("content-type", "application/json")
+		// w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
 		stringURL := r.FormValue("url")
@@ -50,13 +50,8 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		dbURL := storage.AddURL(stringURL)
-		resp, err := json.Marshal(dbURL.Id)
 
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		w.Write(resp)
+		myString := fmt.Sprintf("http://127.0.0.1/?id=%s", dbURL.Id)
+		w.Write([]byte(myString))
 	}
 }
