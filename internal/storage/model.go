@@ -2,5 +2,5 @@ package storage
 
 type RedirectURL struct {
 	Id      int    `json:"id"`
-	Address string `json:"address"`
+	Address string `json:"url"`
 }
