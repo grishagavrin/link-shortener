@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/grishagavrin/link-shortener/internal/storage"
@@ -38,10 +39,13 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		// w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		b, _ := io.ReadAll(r.Body)
+		fmt.Println("B", string(b))
 
 		stringURL := r.FormValue("URL")
-		if stringURL == "" {
 
+		if stringURL == "" {
+			fmt.Println("B", string(b))
 			http.Error(w, "MY ERROR!!! The url parameter is missing", http.StatusBadRequest)
 			return
 		}
