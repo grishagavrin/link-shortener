@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/grishagavrin/link-shortener/internal/storage"
 )
@@ -24,13 +23,14 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		intID, err := strconv.Atoi(r.URL.Query().Get("id"))
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
+		// intID, err := strconv.Atoi(r.URL.Query().Get("id"))
+		// if err != nil {
+		// 	http.Error(w, err.Error(), 500)
+		// 	return
+		// }
 
-		founded, err := storage.GetURLById(intID)
+		founded, err := storage.GetURLById(q)
+
 		if err != nil {
 			http.Error(w, "id parametr not found", http.StatusNotFound)
 			return
@@ -50,11 +50,7 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		dbURL := storage.AddURL(stringURL)
-		// resp := strconv.Itoa(dbURL.Id)
-
 		resp, err := json.Marshal(dbURL.Id)
-
-		// res := strconv.Itoa(dbURL.Id)
 
 		if err != nil {
 			http.Error(w, err.Error(), 500)
