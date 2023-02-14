@@ -1,6 +1,7 @@
 package main
 
 // nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+// go test ./... -v
 
 import (
 	"fmt"
@@ -13,12 +14,15 @@ import (
 
 func main() {
 
-	http.HandleFunc("/", handlers.CommonHandler)
-
-	server := &http.Server{
-		Addr: fmt.Sprintf("%s:%s", config.HOST, config.PORT),
-	}
-
 	fmt.Printf("Server startder on %s:%s", config.HOST, config.PORT)
-	log.Fatal(server.ListenAndServe())
+	err := http.ListenAndServe(config.HOST+":"+config.PORT, MyHandler())
+	if err != nil {
+		log.Fatal("Could not start server: ", err)
+	}
+}
+
+func MyHandler() http.Handler {
+	r := http.NewServeMux()
+	r.HandleFunc("/", handlers.CommonHandler)
+	return r
 }

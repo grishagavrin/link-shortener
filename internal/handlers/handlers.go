@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/grishagavrin/link-shortener/internal/storage"
 )
 
-var DB = map[int]string{}
-
 func CommonHandler(w http.ResponseWriter, r *http.Request) {
-	// if r.URL.Path != "/" {
-	// 	http.Error(w, "Uncorrected route", http.StatusBadRequest)
-	// 	return
-	// }
-
 	switch r.Method {
+
 	case "GET":
+		if !regexp.MustCompile(`^/[0-9]+$`).MatchString(r.URL.Path) {
+			http.Error(w, "Uncorrected route", http.StatusBadRequest)
+			return
+		}
+
 		q := r.URL.Path[1:]
 
 		if q == "" {
@@ -36,6 +36,12 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case "POST":
+
+		if r.URL.Path != "/" {
+			http.Error(w, "Uncorrected route", http.StatusBadRequest)
+			return
+		}
+
 		w.WriteHeader(http.StatusCreated)
 		b, _ := io.ReadAll(r.Body)
 		stringURL := string(b)
@@ -46,9 +52,12 @@ func CommonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		dbURL := storage.AddURL(stringURL)
-
 		myString := fmt.Sprintf("http://localhost:8080/%s", dbURL.Id)
 
 		w.Write([]byte(myString))
+
+	default:
+		http.Error(w, "Uncorrected route", http.StatusBadRequest)
 	}
+
 }
