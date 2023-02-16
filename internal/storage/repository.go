@@ -25,7 +25,12 @@ func RepositoryGetURLById(id string) (RedirectURL, error) {
 
 	for _, v := range databaseURL {
 		if v.Id == id {
-			newURL = v
+			newURL = RedirectURL{
+				v.Id,
+				v.Address,
+			}
+
+			break
 		}
 	}
 

@@ -9,20 +9,13 @@ import (
 	"net/http"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
-	"github.com/grishagavrin/link-shortener/internal/handlers"
+	"github.com/grishagavrin/link-shortener/internal/routes"
 )
 
 func main() {
-
-	fmt.Printf("Server startder on %s:%s", config.HOST, config.PORT)
-	err := http.ListenAndServe(config.HOST+":"+config.PORT, MyHandler())
+	fmt.Printf("Server started on %s:%s", config.HOST, config.PORT)
+	err := http.ListenAndServe(config.HOST+":"+config.PORT, routes.ServiceRouter())
 	if err != nil {
 		log.Fatal("Could not start server: ", err)
 	}
-}
-
-func MyHandler() http.Handler {
-	r := http.NewServeMux()
-	r.HandleFunc("/", handlers.CommonHandler)
-	return r
 }

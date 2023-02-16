@@ -5,92 +5,64 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"github.com/grishagavrin/link-shortener/internal/handlers"
+	"github.com/grishagavrin/link-shortener/internal/routes"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCommonHandler(t *testing.T) {
-	type want struct {
-		code        int
-		response    string
-		contentType string
-		value       string
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
+	var req *http.Request
+	var err error
+
+	if method == "POST" {
+		req, err = http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
+	} else if method == "GET" {
+		req, err = http.NewRequest(method, ts.URL+path, nil)
 	}
 
-	postTests := []struct {
-		want want
-	}{
-		{
-			want: want{
-				code:        201,
-				response:    "http://localhost:8080/0",
-				contentType: "",
-				value:       "http://yandex.ru",
-			},
-		},
-	}
+	require.NoError(t, err)
 
-	for _, tt := range postTests {
-		t.Run("POST create short URL in DB (positive)", func(t *testing.T) {
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
 
-			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.want.value))
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 
-			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handlers.CommonHandler)
+	defer resp.Body.Close()
 
-			h.ServeHTTP(w, request)
-			res := w.Result()
+	return resp.StatusCode, string(respBody)
+}
 
-			if res.StatusCode != tt.want.code {
-				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
-			}
+func TestWriteURL(t *testing.T) {
+	r := routes.ServiceRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.Equal(t, "http://localhost:8080/0", body)
 
-			if err != nil {
-				t.Fatal(err)
-			}
+	statusCode, body = testRequest(t, ts, "POST", "/", "")
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+	assert.Equal(t, "Body is empty\n", body)
+}
 
-			if string(resBody) != tt.want.response {
-				t.Errorf("Expected body %s, got:  %s", tt.want.response, w.Body.String())
-			}
+func TestGetURL(t *testing.T) {
+	r := routes.ServiceRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
-			if res.Header.Get("Content-Type") != tt.want.contentType {
-				t.Errorf("Expected Content-Type %s, got %s", tt.want.contentType, res.Header.Get("Content-Type"))
-			}
-		})
+	statusCode, body := testRequest(t, ts, "GET", "/0", "")
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.NotNil(t, body)
 
-		t.Run("GET short URL by id (positive)", func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, "/0", nil)
-			request.Header.Add("Content-Type", tt.want.contentType)
+	statusCode, body = testRequest(t, ts, "GET", "/6", "")
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+	assert.Equal(t, "The id parametr not found in DB\n", body)
 
-			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handlers.CommonHandler)
-
-			h.ServeHTTP(w, request)
-			res := w.Result()
-
-			if res.StatusCode != 307 {
-				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
-			}
-
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !strings.Contains(string(resBody), tt.want.value) {
-				t.Errorf("Expected body %s, got:  %s", tt.want.value, w.Body.String())
-			}
-
-			if !strings.Contains(res.Header.Get("Content-Type"), "text/html") {
-				t.Errorf("Expected Content-Type %s, got %s", "text/html", res.Header.Get("Content-Type"))
-			}
-		})
-	}
+	statusCode, body = testRequest(t, ts, "GET", "/aaa", "")
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+	assert.Equal(t, "Enter a number type parameter\n", body)
 }

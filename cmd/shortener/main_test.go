@@ -2,55 +2,41 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/grishagavrin/link-shortener/internal/routes"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPostRouting(t *testing.T) {
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
 
-	srv := httptest.NewServer(MyHandler())
-	defer srv.Close()
+	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
+	require.NoError(t, err)
 
-	//POST
-	res, err := http.Post(srv.URL, "text/plain", bytes.NewBufferString("http://yandex.ru"))
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
 
-	if err != nil {
-		t.Fatalf("could not send POST request: %v", err)
-	}
-	defer res.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 
-	if res.StatusCode != http.StatusCreated {
-		t.Errorf("expected status 201 - Created; got %v", res.Status)
-	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode, string(respBody)
 }
 
-func TestGetRouting(t *testing.T) {
+func TestServerRun(t *testing.T) {
+	r := routes.ServiceRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
-	srv := httptest.NewServer(MyHandler())
-	defer srv.Close()
+	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
+	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.Equal(t, "http://localhost:8080/0", body)
 
-	//POST
-	res, err := http.Get(fmt.Sprintf("%s/0", srv.URL))
-
-	if err != nil {
-		t.Fatalf("could not send GET request: %v", err)
-	}
-	defer res.Body.Close()
-	b, err := ioutil.ReadAll(res.Body)
-
-	bString := string(bytes.TrimSpace(b))
-	if bString == "" {
-		t.Fatalf("could not read response: %v", bString)
-	}
-
-	if err != nil {
-		t.Fatalf("could not read response: %v", err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200; got %v", res.Status)
-	}
+	statusCode, _ = testRequest(t, ts, "GET", "/0", "")
+	assert.Equal(t, http.StatusOK, statusCode)
 }
