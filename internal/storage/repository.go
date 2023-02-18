@@ -11,8 +11,8 @@ func RepositoryAddURL(inputURL string) RedirectURL {
 
 	id := strconv.Itoa(len(databaseURL))
 
-	var newURL RedirectURL = RedirectURL{
-		Id:      id,
+	newURL := RedirectURL{
+		ID:      id,
 		Address: inputURL,
 	}
 
@@ -20,13 +20,13 @@ func RepositoryAddURL(inputURL string) RedirectURL {
 	return newURL
 }
 
-func RepositoryGetURLById(id string) (RedirectURL, error) {
+func RepositoryGetURLByID(id string) (RedirectURL, error) {
 	var newURL RedirectURL
 
 	for _, v := range databaseURL {
-		if v.Id == id {
+		if v.ID == id {
 			newURL = RedirectURL{
-				v.Id,
+				v.ID,
 				v.Address,
 			}
 

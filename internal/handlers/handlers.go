@@ -26,7 +26,6 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, founded.Address, http.StatusTemporaryRedirect)
-	return
 }
 
 func WriteURL(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +40,7 @@ func WriteURL(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	dbURL := storage.AddURL(body)
-	myString := fmt.Sprintf("http://localhost:8080/%s", dbURL.Id)
+	myString := fmt.Sprintf("http://localhost:8080/%s", dbURL.ID)
 
 	w.Write([]byte(myString))
 }
