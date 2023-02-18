@@ -18,7 +18,7 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 
 	q := chi.URLParam(r, "id")
 
-	founded, err := storage.GetURLById(q)
+	founded, err := storage.GetURLByID(q)
 
 	if err != nil {
 		http.Error(w, "The id parametr not found in DB", http.StatusBadRequest)
