@@ -1,42 +1,19 @@
 package storage
 
-import (
-	"errors"
-	"strconv"
-)
+import "errors"
 
-var databaseURL []RedirectURL = []RedirectURL{}
+var localDB = DB{Links: make([]RedirectURL, 0)}
 
-func RepositoryAddURL(inputURL string) RedirectURL {
-
-	id := strconv.Itoa(len(databaseURL))
-
-	newURL := RedirectURL{
-		ID:      id,
-		Address: inputURL,
-	}
-
-	databaseURL = append(databaseURL, newURL)
-	return newURL
+func RepositoryAddURL(url string) RedirectURL {
+	return localDB.AddLink(url)
 }
 
 func RepositoryGetURLByID(id string) (RedirectURL, error) {
-	var newURL RedirectURL
-
-	for _, v := range databaseURL {
-		if v.ID == id {
-			newURL = RedirectURL{
-				v.ID,
-				v.Address,
-			}
-
-			break
-		}
-	}
-
-	if newURL.Address == "" {
+	newURL := localDB.GetLink(id)
+	if newURL == (RedirectURL{}) {
 		return newURL, errors.New("DB doesn`t have value")
 	}
 
 	return newURL, nil
+
 }
