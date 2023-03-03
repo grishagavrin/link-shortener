@@ -28,18 +28,18 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 func GetLink(w http.ResponseWriter, r *http.Request) {
 	q := chi.URLParam(r, "id")
-	if len(q) != config.LEN_HASH {
+	if len(q) != config.LENHASH {
 		http.Error(w, "Enter a number type parameter", http.StatusBadRequest)
 		return
 	}
 
-	foundedUrl, err := storage.GetLink(q)
+	foundedURL, err := storage.GetLink(q)
 	if err != nil {
 		http.Error(w, "The id parametr not found in DB", http.StatusBadRequest)
 		return
 	}
 
-	http.Redirect(w, r, foundedUrl, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, foundedURL, http.StatusTemporaryRedirect)
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request) {

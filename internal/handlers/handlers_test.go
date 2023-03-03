@@ -60,6 +60,7 @@ func TestWriteURL(t *testing.T) {
 	defer ts.Close()
 
 	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
+	_ = body
 	assert.Equal(t, http.StatusCreated, statusCode)
 
 	statusCode, body = testRequest(t, ts, "POST", "/", "")
@@ -75,7 +76,7 @@ func TestGetURL(t *testing.T) {
 	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
 	assert.Equal(t, http.StatusCreated, statusCode)
 
-	statusCode, body = testRequest(t, ts, "GET", "/"+body[len(body)-config.LEN_HASH:], "")
+	statusCode, body = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.NotNil(t, body)
 

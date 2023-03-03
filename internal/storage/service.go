@@ -11,7 +11,7 @@ import (
 const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
 
 func AddLinkInDB(inputURL string) string {
-	genKey := randStringBytes(config.LEN_HASH)
+	genKey := randStringBytes(config.LENHASH)
 	urlString := RepositoryAddLik(inputURL, genKey)
 	return fmt.Sprintf("http://localhost:8080/%s", urlString)
 }

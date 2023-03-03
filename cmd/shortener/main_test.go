@@ -37,6 +37,6 @@ func TestServerRun(t *testing.T) {
 	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
 	assert.Equal(t, http.StatusCreated, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LEN_HASH:], "")
+	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
 	assert.Equal(t, http.StatusOK, statusCode)
 }
