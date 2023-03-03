@@ -1,48 +1,26 @@
 package storage
 
 import (
-	"strconv"
 	"sync"
 )
 
-type DB struct {
-	MU    sync.Mutex
-	Links []RedirectURL
+type LinkDB struct {
+	MU       sync.Mutex
+	LinkList map[string]string
 }
 
-type RedirectURL struct {
-	ID      string
-	Address string
-}
-
-func (db *DB) AddLink(url string) RedirectURL {
+func (db *LinkDB) AddLinkDB(url string, key string) string {
 	db.MU.Lock()
 	defer db.MU.Unlock()
-	id := strconv.Itoa(len(db.Links))
 
-	newURL := RedirectURL{
-		ID:      id,
-		Address: url,
+	if _, ok := db.LinkList[key]; !ok {
+		db.LinkList[key] = url
 	}
-
-	db.Links = append(db.Links, newURL)
-	return newURL
+	return key
 }
 
-func (db *DB) GetLink(id string) RedirectURL {
+func (db *LinkDB) GetLinkDB(key string) string {
 	db.MU.Lock()
 	defer db.MU.Unlock()
-	var newURL RedirectURL
-
-	for _, v := range db.Links {
-		if v.ID == id {
-			newURL = RedirectURL{
-				v.ID,
-				v.Address,
-			}
-			break
-		}
-	}
-
-	return newURL
+	return db.LinkList[key]
 }

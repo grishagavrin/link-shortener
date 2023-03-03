@@ -1,19 +1,11 @@
 package storage
 
-import "errors"
+var MyDB = LinkDB{LinkList: make(map[string]string)}
 
-var localDB = DB{Links: make([]RedirectURL, 0)}
-
-func RepositoryAddURL(url string) RedirectURL {
-	return localDB.AddLink(url)
+func RepositoryAddLik(url string, key string) string {
+	return MyDB.AddLinkDB(url, key)
 }
 
-func RepositoryGetURLByID(id string) (RedirectURL, error) {
-	newURL := localDB.GetLink(id)
-	if newURL == (RedirectURL{}) {
-		return newURL, errors.New("DB doesn`t have value")
-	}
-
-	return newURL, nil
-
+func RepositoryGetLink(id string) string {
+	return MyDB.GetLinkDB(id)
 }
