@@ -13,8 +13,10 @@ import (
 )
 
 func main() {
-	fmt.Printf("Server started on %s:%s", config.HOST, config.PORT)
-	err := http.ListenAndServe(config.HOST+":"+config.PORT, routes.ServiceRouter())
+	cfg := config.GetENV()
+
+	fmt.Printf("Server started on %s", cfg.ServerAddress)
+	err := http.ListenAndServe(cfg.ServerAddress, routes.ServiceRouter())
 	if err != nil {
 		log.Fatal("Could not start server: ", err)
 	}
