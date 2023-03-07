@@ -14,6 +14,7 @@ import (
 
 func main() {
 	cfg := config.GetENV()
+	fmt.Println(cfg.BaseURL)
 
 	fmt.Printf("Server started on %s", cfg.ServerAddress)
 	err := http.ListenAndServe(cfg.ServerAddress, routes.ServiceRouter())
