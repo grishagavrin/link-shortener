@@ -28,7 +28,7 @@ func (cfg *ConfigENV) GetENVServer() string {
 	return cfg.ServerAddress
 }
 
-func (cfg *ConfigENV) GetENVBaseUrl() string {
+func (cfg *ConfigENV) GetENVBaseURL() string {
 	cfg.MU.RLock()
 	defer cfg.MU.RUnlock()
 

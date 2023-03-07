@@ -15,7 +15,7 @@ func AddLinkInDB(inputURL string) string {
 
 	genKey := randStringBytes(config.LENHASH)
 	urlString := RepositoryAddLik(inputURL, genKey)
-	return fmt.Sprintf("%s/%s", cfg.GetENVBaseUrl(), urlString)
+	return fmt.Sprintf("%s/%s", cfg.GetENVBaseURL(), urlString)
 }
 
 func GetLink(id string) (string, error) {
