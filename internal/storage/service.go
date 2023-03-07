@@ -11,9 +11,11 @@ import (
 const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
 
 func AddLinkInDB(inputURL string) string {
+	cfg := &config.ConfigENV{}
+
 	genKey := randStringBytes(config.LENHASH)
 	urlString := RepositoryAddLik(inputURL, genKey)
-	return fmt.Sprintf("http://localhost:8080/%s", urlString)
+	return fmt.Sprintf("%s/%s", cfg.GetENVBaseUrl(), urlString)
 }
 
 func GetLink(id string) (string, error) {
