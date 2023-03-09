@@ -2,39 +2,36 @@ package config
 
 import (
 	"log"
-	"sync"
+	"reflect"
 
 	"github.com/caarlos0/env"
 )
 
 type ConfigENV struct {
-	MU            sync.RWMutex
-	ServerAddress string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
-	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
+	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 }
 
 const (
-	LENHASH = 16
+	LENHASH         = 16
+	ServerAddress   = "ServerAddress"
+	BaseURL         = "BaseURL"
+	FileStoragePath = "FileStoragePath"
 )
 
-func (cfg *ConfigENV) GetENVServer() string {
-	cfg.MU.RLock()
-	defer cfg.MU.RUnlock()
-
-	if err := env.Parse(cfg); err != nil {
+func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
+	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("can`t load ENV %+v\n", err)
 	}
 
-	return cfg.ServerAddress
-}
-
-func (cfg *ConfigENV) GetENVBaseURL() string {
-	cfg.MU.RLock()
-	defer cfg.MU.RUnlock()
-
-	if err := env.Parse(cfg); err != nil {
-		log.Fatalf("can`t load ENV %+v\n", err)
+	values := reflect.ValueOf(cfg)
+	typesOf := values.Type()
+	for i := 0; i < values.NumField(); i++ {
+		if typesOf.Field(i).Name == fieldName {
+			return values.Field(i).String(), true
+		}
 	}
 
-	return cfg.BaseURL
+	return "", false
 }
