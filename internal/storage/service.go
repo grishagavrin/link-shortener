@@ -13,14 +13,14 @@ const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
 
 func AddLinkInDB(inputURL string) string {
 	cfg := config.ConfigENV{}
-	baseUrl, exists := cfg.GetEnvValue(config.BaseURL)
+	baseURL, exists := cfg.GetEnvValue(config.BaseURL)
 	if !exists {
 		log.Fatalf("env tag is not created, %s", config.BaseURL)
 	}
 
 	genKey := randStringBytes(config.LENHASH)
 	urlString := RepositoryAddLik(inputURL, genKey)
-	return fmt.Sprintf("%s/%s", baseUrl, urlString)
+	return fmt.Sprintf("%s/%s", baseURL, urlString)
 }
 
 func GetLink(id string) (string, error) {
