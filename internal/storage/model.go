@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 	"sync"
 )
@@ -28,56 +29,60 @@ func (db *LinkDB) GetLinkDB(key string) string {
 	return db.LinkList[key]
 }
 
-type Event struct {
+type UrlRecordInFile struct {
 	Key string `json:"key"`
 	Url string `json:"url"`
 }
 
-type Producer struct {
+type FileDB struct {
+	MU      sync.Mutex
 	file    *os.File
 	writer  *bufio.Writer
 	scanner *bufio.Scanner
 }
 
-func (f *Producer) WriteEvent(event *Event) error {
-	data, err := json.Marshal(&event)
+func (f *FileDB) WriteEvent(urlRec *UrlRecordInFile) error {
+	data, err := json.Marshal(&urlRec)
 	if err != nil {
 		return err
 	}
 
-	// записываем событие в буфер
+	f.MU.Lock()
+	defer f.MU.Unlock()
 	if _, err := f.writer.Write(data); err != nil {
 		return err
 	}
 
-	// добавляем перенос строки
 	if err := f.writer.WriteByte('\n'); err != nil {
 		return err
 	}
 
-	// записываем буфер в файл
 	return f.writer.Flush()
-
-	// return f.encoder.Encode(&event)
 }
 
-func (c *Producer) ReadEvent() (*Event, error) {
-	// одиночное сканирование до следующей строки
-	if !c.scanner.Scan() {
-		return nil, c.scanner.Err()
-	}
-	// читаем данные из scanner
-	data := c.scanner.Bytes()
+func (f *FileDB) ReadEvent(key string) (string, error) {
+	f.MU.Lock()
+	defer f.MU.Unlock()
 
-	event := Event{}
-	err := json.Unmarshal(data, &event)
-	if err != nil {
-		return nil, err
-	}
+	urlRec := UrlRecordInFile{}
 
-	return &event, nil
+	for {
+		if !f.scanner.Scan() {
+			return "", errors.New("url not found")
+		}
+		data := f.scanner.Bytes()
+
+		err := json.Unmarshal(data, &urlRec)
+		if err != nil {
+			return "", err
+		}
+
+		if urlRec.Key == key {
+			return urlRec.Url, nil
+		}
+	}
 }
 
-func (p *Producer) Close() error {
+func (p *FileDB) Close() error {
 	return p.file.Close()
 }
