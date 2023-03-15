@@ -28,7 +28,7 @@ func RepositoryReadFileDB(filePath, key string) (string, error) {
 	return str, nil
 }
 
-func RepositoryWriteFileDB(filePath string, urlRec *UrlRecordInFile) bool {
+func RepositoryWriteFileDB(filePath string, urlRec *URLRecordInFile) bool {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return false

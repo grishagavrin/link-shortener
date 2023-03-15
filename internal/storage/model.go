@@ -29,9 +29,9 @@ func (db *LinkDB) GetLinkDB(key string) string {
 	return db.LinkList[key]
 }
 
-type UrlRecordInFile struct {
+type URLRecordInFile struct {
 	Key string `json:"key"`
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type FileDB struct {
@@ -41,7 +41,7 @@ type FileDB struct {
 	scanner *bufio.Scanner
 }
 
-func (f *FileDB) WriteEvent(urlRec *UrlRecordInFile) error {
+func (f *FileDB) WriteEvent(urlRec *URLRecordInFile) error {
 	data, err := json.Marshal(&urlRec)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (f *FileDB) ReadEvent(key string) (string, error) {
 	f.MU.Lock()
 	defer f.MU.Unlock()
 
-	urlRec := UrlRecordInFile{}
+	urlRec := URLRecordInFile{}
 
 	for {
 		if !f.scanner.Scan() {
@@ -78,11 +78,11 @@ func (f *FileDB) ReadEvent(key string) (string, error) {
 		}
 
 		if urlRec.Key == key {
-			return urlRec.Url, nil
+			return urlRec.URL, nil
 		}
 	}
 }
 
-func (p *FileDB) Close() error {
-	return p.file.Close()
+func (f *FileDB) Close() error {
+	return f.file.Close()
 }

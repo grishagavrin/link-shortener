@@ -23,9 +23,9 @@ func AddLinkInDB(inputURL string) (string, error) {
 		return fmt.Sprintf("%s/%s", baseURL, urlString), nil
 	}
 
-	var urlRec = &UrlRecordInFile{
+	var urlRec = &URLRecordInFile{
 		Key: genKey,
-		Url: inputURL,
+		URL: inputURL,
 	}
 
 	saved := RepositoryWriteFileDB(filePath, urlRec)
