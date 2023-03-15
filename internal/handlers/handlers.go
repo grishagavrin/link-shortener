@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -16,7 +17,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	body := string(b)
 
 	if body == "" {
-		http.Error(w, "Body is empty", http.StatusBadRequest)
+		http.Error(w, "body is empty", http.StatusBadRequest)
 		return
 	}
 
@@ -33,7 +34,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 func GetLink(w http.ResponseWriter, r *http.Request) {
 	q := chi.URLParam(r, "id")
 	if len(q) != config.LENHASH {
-		http.Error(w, "enter correct length url parameter", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("enter correct url parameter - length: %v", config.LENHASH), http.StatusBadRequest)
 		return
 	}
 
@@ -56,7 +57,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	decJSON.DisallowUnknownFields()
 
 	if err := decJSON.Decode(&reqBody); err != nil {
-		http.Error(w, "Invalid fields in JSON", http.StatusBadRequest)
+		http.Error(w, "invalid fields in JSON", http.StatusBadRequest)
 		return
 	}
 

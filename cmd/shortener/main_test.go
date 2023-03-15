@@ -14,7 +14,6 @@ import (
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
-
 	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
 	require.NoError(t, err)
 
@@ -23,7 +22,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-
 	defer resp.Body.Close()
 
 	return resp.StatusCode, string(respBody)
@@ -39,4 +37,8 @@ func TestServerRun(t *testing.T) {
 
 	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
 	assert.Equal(t, http.StatusOK, statusCode)
+
+	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
+	assert.Equal(t, "invalid fields in JSON\n", body)
+	assert.Equal(t, http.StatusBadRequest, statusCode)
 }
