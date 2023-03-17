@@ -42,29 +42,10 @@ func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
 
 	values := reflect.ValueOf(cfg)
 	typesOf := values.Type()
-	var valForEqual string
 	for i := 0; i < values.NumField(); i++ {
-		if typesOf.Field(i).Name != fieldName {
-			continue
-		} else {
-			valForEqual = values.Field(i).String()
-			if valForEqual != "" {
-				return valForEqual, true
-			}
+		if typesOf.Field(i).Name == fieldName {
+			return values.Field(i).String(), true
 		}
-	}
-
-	switch fieldName {
-	case ServerAddress:
-		valForEqual = aFlag
-	case BaseURL:
-		valForEqual = bFlag
-	case FileStoragePath:
-		valForEqual = fFlag
-	}
-
-	if valForEqual != "" {
-		return valForEqual, true
 	}
 
 	return "", false
