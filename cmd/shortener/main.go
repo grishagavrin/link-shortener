@@ -14,6 +14,7 @@ import (
 
 func main() {
 	cfg := config.ConfigENV{}
+	config.SetFlag()
 	serv, exists := cfg.GetEnvValue(config.ServerAddress)
 	if !exists {
 		log.Fatalf("env tag is not created, %s", config.ServerAddress)
