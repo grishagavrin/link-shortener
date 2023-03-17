@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -31,6 +32,7 @@ func RepositoryReadFileDB(filePath, key string) (string, error) {
 func RepositoryWriteFileDB(filePath string, urlRec *URLRecordInFile) bool {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
+		fmt.Println(err)
 		return false
 	}
 

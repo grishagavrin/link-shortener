@@ -33,7 +33,7 @@ var (
 func SetFlag() {
 	flag.StringVar(&aFlag, "a", "127.0.0.1:8080", "default host and port")
 	flag.StringVar(&bFlag, "b", "http://localhost:8080", "base url for response query")
-	flag.StringVar(&fFlag, "f", "", "file storage location")
+	flag.StringVar(&fFlag, "f", "../../internal/storage/FileDB.log", "file storage location")
 	flag.Parse()
 }
 
