@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"reflect"
 
@@ -30,10 +31,11 @@ var (
 )
 
 func SetFlag() {
-	flag.StringVar(&aFlag, "a", "127.0.0.1:8080", "default host and port")
-	flag.StringVar(&bFlag, "b", "http://localhost:8080", "base url for response query")
+	flag.StringVar(&aFlag, "a", "127.0.0.1:8081", "default host and port")
+	flag.StringVar(&bFlag, "b", "http://localhost:8081", "base url for response query")
 	flag.StringVar(&fFlag, "f", "../../internal/storage/FileDB.log", "file storage location")
 	flag.Parse()
+	fmt.Println("MY FLAGS!", aFlag, bFlag, fFlag)
 }
 
 func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
@@ -43,11 +45,32 @@ func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
 
 	values := reflect.ValueOf(cfg)
 	typesOf := values.Type()
+	valForEq := ""
 	for i := 0; i < values.NumField(); i++ {
 		if typesOf.Field(i).Name == fieldName {
-			return values.Field(i).String(), true
+			valForEq = values.Field(i).String()
+			// return values.Field(i).String(), true
 		}
 	}
 
-	return "", false
+	switch fieldName {
+	case ServerAddress:
+		if valForEq == "" {
+			valForEq = aFlag
+		}
+	case BaseURL:
+		if valForEq == "" {
+			valForEq = bFlag
+		}
+	case FileStoragePath:
+		if valForEq == "" {
+			valForEq = fFlag
+		}
+	}
+
+	if valForEq != "" {
+		return valForEq, true
+	}
+
+	return valForEq, false
 }

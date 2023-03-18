@@ -1,7 +1,10 @@
 package main
 
-// nodemon --watch ../../ --exec go run main.go --signal SIGTERM
-// go test ./... -v
+//macOS -  nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+//windows -  nodemon --watch ../../ --exec go run main.go --signal SIGKILL
+// go test ./... -v\
+
+// shortenertest -test.v -test.run=^TestIteration7$ -binary-path=cmd/shortener/shortener -server-port=8080 -file-storage-path=internal/storage/FileDB.log -source-path=.
 
 import (
 	"fmt"
@@ -13,6 +16,7 @@ import (
 )
 
 func main() {
+	config.SetFlag()
 	cfg := config.ConfigENV{}
 	serv, exists := cfg.GetEnvValue(config.ServerAddress)
 	if !exists {
