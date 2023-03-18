@@ -9,10 +9,10 @@ import (
 )
 
 type ConfigENV struct {
-	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	// FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"/Users/admin/Documents/projects/link-shortener/internal/storage/FileDB.log"`
+	ServerAddress string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
+	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	// FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"internal/storage/FileDB.log"`
 }
 
 const (
@@ -30,9 +30,9 @@ var (
 )
 
 func SetFlag() {
-	flag.StringVar(&aFlag, "a", "127.0.0.1:8081", "default host and port")
-	flag.StringVar(&bFlag, "b", "http://localhost:8081", "base url for response query")
-	flag.StringVar(&fFlag, "f", "../../internal/storage/FileDB.log", "file storage location")
+	flag.StringVar(&aFlag, "a", "127.0.0.1:8080", "default host and port")
+	flag.StringVar(&bFlag, "b", "http://localhost:8080", "base url for response query")
+	flag.StringVar(&fFlag, "f", "internal/storage/FileDB.log", "file storage location")
 	flag.Parse()
 }
 

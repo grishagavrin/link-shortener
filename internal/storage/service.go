@@ -28,9 +28,10 @@ func AddLinkInDB(inputURL string) (string, error) {
 		URL: inputURL,
 	}
 
-	saved := RepositoryWriteFileDB(filePath, urlRec)
-	if !saved {
-		return "", fmt.Errorf("something went wrong with write file")
+	err := RepositoryWriteFileDB(filePath, urlRec)
+	if err != nil {
+		// return "", fmt.Errorf("something went wrong with write file")\
+		return "", err
 	}
 
 	return fmt.Sprintf("%s/%s", baseURL, genKey), nil

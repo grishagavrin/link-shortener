@@ -3,7 +3,6 @@ package storage
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -29,11 +28,12 @@ func RepositoryReadFileDB(filePath, key string) (string, error) {
 	return str, nil
 }
 
-func RepositoryWriteFileDB(filePath string, urlRec *URLRecordInFile) bool {
+func RepositoryWriteFileDB(filePath string, urlRec *URLRecordInFile) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		fmt.Println(err)
-		return false
+		// fmt.Println(err)
+		// return false
+		return err
 	}
 
 	wrFile := &FileDB{
@@ -43,9 +43,10 @@ func RepositoryWriteFileDB(filePath string, urlRec *URLRecordInFile) bool {
 	defer wrFile.Close()
 
 	if err := wrFile.WriteEvent(urlRec); err != nil {
-		return false
+		// return false
+		return err
 	}
-	return true
+	return nil
 }
 
 func RepositoryAddLink(url string, key string) string {

@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	config.SetFlag()
+	// config.SetFlag()
 	cfg := config.ConfigENV{}
 	serv, exists := cfg.GetEnvValue(config.ServerAddress)
 	if !exists {
