@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"log"
 	"reflect"
 
@@ -21,6 +22,19 @@ const (
 	FileStoragePath = "FileStoragePath"
 	HashSymbols     = "1234567890qwertyuiopasdfghjklzxcvbnm"
 )
+
+var (
+	aFlag string
+	bFlag string
+	fFlag string
+)
+
+func SetFlag() {
+	flag.StringVar(&aFlag, "a", "127.0.0.1:8080", "default host and port")
+	flag.StringVar(&bFlag, "b", "http://localhost:8080", "base url for response query")
+	flag.StringVar(&fFlag, "f", "../../internal/storage/FileDB.log", "file storage location")
+	flag.Parse()
+}
 
 func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
 	if err := env.Parse(&cfg); err != nil {
