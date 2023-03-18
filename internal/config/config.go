@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"reflect"
 
@@ -35,7 +34,6 @@ func SetFlag() {
 	flag.StringVar(&bFlag, "b", "http://localhost:8081", "base url for response query")
 	flag.StringVar(&fFlag, "f", "../../internal/storage/FileDB.log", "file storage location")
 	flag.Parse()
-	fmt.Println("MY FLAGS!", aFlag, bFlag, fFlag)
 }
 
 func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
