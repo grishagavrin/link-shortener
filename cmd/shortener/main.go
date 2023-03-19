@@ -13,15 +13,15 @@ import (
 )
 
 func main() {
-	cfg := config.ConfigENV{}
-	serv, exists := cfg.GetEnvValue(config.ServerAddress)
-	if !exists {
-		log.Fatalf("env tag is not created, %s", config.ServerAddress)
-	}
-
-	fmt.Printf("Server started on %s", serv)
-	err := http.ListenAndServe(serv, routes.ServiceRouter())
+	cfg := config.Instance()
+	serv, err := cfg.GetCfgValue(config.ServerAddress)
 	if err != nil {
-		log.Fatal("Could not start server: ", err)
+		log.Fatal(err.Error())
+	}
+	fmt.Printf("Server started on %s\n", serv)
+
+	err = http.ListenAndServe(serv, routes.ServiceRouter())
+	if err != nil {
+		log.Fatalf("Could not start server: %v", err)
 	}
 }

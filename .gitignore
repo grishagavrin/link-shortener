@@ -1,5 +1,5 @@
 .DS_Store
-/internal/storage/FileDB.log
+/cmd/shortener/FileDB.log
 # Binaries for programs and plugins
 *.exe
 *.exe~

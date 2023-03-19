@@ -9,18 +9,27 @@ import (
 )
 
 func AddLinkInDB(inputURL string) (string, error) {
-	cfg := config.ConfigENV{}
-	baseURL, exists := cfg.GetEnvValue(config.BaseURL)
-	if !exists {
+	// cfg := config.MyConfig{}
+	// baseURL, exists := cfg.GetEnvValue(config.BaseURL)
+	// if !exists {
+	// 	return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)
+	// }
+	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+	if err != nil {
 		return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)
 	}
 
 	genKey := randStringBytes(config.LENHASH)
 
-	filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
-	if !exists || filePath == "" {
-		urlString := RepositoryAddLink(inputURL, genKey)
-		return fmt.Sprintf("%s/%s", baseURL, urlString), nil
+	// filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
+	// if !exists || filePath == "" {
+	// 	urlString := RepositoryAddLink(inputURL, genKey)
+	// 	return fmt.Sprintf("%s/%s", baseURL, urlString), nil
+	// }
+
+	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil {
+		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
 	}
 
 	var urlRec = &URLRecordInFile{
@@ -37,10 +46,16 @@ func AddLinkInDB(inputURL string) (string, error) {
 }
 
 func GetLink(id string) (string, error) {
-	cfg := config.ConfigENV{}
-	filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
+	// cfg := config.MyConfig{}
+	// filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
 
-	if !exists || filePath == "" {
+	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil {
+		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
+	}
+
+	// if !exists || filePath == "" {
+	if filePath == "" {
 		url := RepositoryGetLink(id)
 		if url == "" {
 			return url, errors.New("DB doesn`t have value")
