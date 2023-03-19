@@ -9,10 +9,6 @@ import (
 )
 
 func AddLinkInDB(inputURL string) (string, error) {
-	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
-	if err != nil {
-		return "", fmt.Errorf("env tag is not created, %s", config.ServerAddress)
-	}
 
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
@@ -28,7 +24,7 @@ func AddLinkInDB(inputURL string) (string, error) {
 
 	if filePath == "" {
 		urlString := RepositoryAddLink(inputURL, genKey)
-		return fmt.Sprintf("%s%s/%s", baseURL, srvAddr, urlString), nil
+		return fmt.Sprintf("%s/%s", baseURL, urlString), nil
 	}
 
 	var urlRec = &URLRecordInFile{
@@ -41,7 +37,7 @@ func AddLinkInDB(inputURL string) (string, error) {
 		return "", fmt.Errorf("something went wrong with write file")
 	}
 
-	return fmt.Sprintf("%s%s/%s", baseURL, srvAddr, genKey), nil
+	return fmt.Sprintf("%s/%s", baseURL, genKey), nil
 }
 
 func GetLink(id string) (string, error) {
