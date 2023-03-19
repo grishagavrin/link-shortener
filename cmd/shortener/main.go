@@ -1,6 +1,7 @@
 package main
 
-// nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+// macOS: nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+// wnd: nodemon --watch ../../ --exec go run main.go --signal SIGKILL
 // go test ./... -v
 
 import (
@@ -13,15 +14,20 @@ import (
 )
 
 func main() {
-	cfg := config.ConfigENV{}
-	serv, exists := cfg.GetEnvValue(config.ServerAddress)
-	if !exists {
-		log.Fatalf("env tag is not created, %s", config.ServerAddress)
+	cfg := config.Instance()
+	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
-	fmt.Printf("Server started on %s", serv)
-	err := http.ListenAndServe(serv, routes.ServiceRouter())
+	srv := &http.Server{
+		Addr:    srvAddr,
+		Handler: routes.ServiceRouter(),
+	}
+
+	fmt.Printf("Server started on %s\n", srvAddr)
+	err = srv.ListenAndServe()
 	if err != nil {
-		log.Fatal("Could not start server: ", err)
+		log.Fatalf("Could not start server: %v", err)
 	}
 }

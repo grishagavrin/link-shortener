@@ -1,37 +1,72 @@
 package config
 
 import (
+	"errors"
+	"flag"
 	"log"
-	"reflect"
 
 	"github.com/caarlos0/env"
 )
 
-type ConfigENV struct {
-	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
+var errUnknownParam = errors.New("unknown env or flag param")
+
+type myConfig struct {
+	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 }
 
 const (
-	LENHASH         = 16
 	ServerAddress   = "ServerAddress"
 	BaseURL         = "BaseURL"
 	FileStoragePath = "FileStoragePath"
+	LENHASH         = 16
+	HashSymbols     = "1234567890qwertyuiopasdfghjklzxcvbnm"
 )
 
-func (cfg ConfigENV) GetEnvValue(fieldName string) (string, bool) {
-	if err := env.Parse(&cfg); err != nil {
+var instance *myConfig
+
+func Instance() *myConfig {
+	if instance == nil {
+		instance = new(myConfig)
+		instance.initENV()
+		// instance.initFlags()
+	}
+	return instance
+}
+
+func (c *myConfig) initENV() {
+	if err := env.Parse(c); err != nil {
 		log.Fatalf("can`t load ENV %+v\n", err)
 	}
+}
 
-	values := reflect.ValueOf(cfg)
-	typesOf := values.Type()
-	for i := 0; i < values.NumField(); i++ {
-		if typesOf.Field(i).Name == fieldName {
-			return values.Field(i).String(), true
-		}
+func (c *myConfig) initFlags() {
+	aFlag := flag.String("a", ":8080", "default host and port")
+	bFlag := flag.String("b", "http://localhost", "base url for response query")
+	fFlag := flag.String("f", "", "file storage")
+	flag.Parse()
+
+	if c.ServerAddress == "" {
+		c.ServerAddress = *aFlag
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = *bFlag
+	}
+	if c.FileStoragePath == "" {
+		c.FileStoragePath = *fFlag
+	}
+}
+
+func (c *myConfig) GetCfgValue(env string) (string, error) {
+	switch env {
+	case ServerAddress:
+		return c.ServerAddress, nil
+	case BaseURL:
+		return c.BaseURL, nil
+	case FileStoragePath:
+		return c.FileStoragePath, nil
 	}
 
-	return "", false
+	return "", errUnknownParam
 }
