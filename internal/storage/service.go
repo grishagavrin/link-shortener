@@ -9,7 +9,6 @@ import (
 )
 
 func AddLinkInDB(inputURL string) (string, error) {
-
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
 		return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/caarlos0/env"
@@ -13,7 +14,7 @@ var errUnknownParam = errors.New("unknown env or flag param")
 type myConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./FileDB.log"`
 }
 
 const (
@@ -30,7 +31,7 @@ func Instance() *myConfig {
 	if instance == nil {
 		instance = new(myConfig)
 		instance.initENV()
-		// instance.initFlags()
+		instance.initFlags()
 	}
 	return instance
 }
@@ -43,14 +44,14 @@ func (c *myConfig) initENV() {
 
 func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", ":8080", "default host and port")
-	bFlag := flag.String("b", "http://localhost", "base url for response query")
-	fFlag := flag.String("f", "", "file storage")
+	bFlag := flag.String("b", "http://localhost:8080", "base url for response query")
+	fFlag := flag.String("f", "./FileDB.log", "file storage")
 	flag.Parse()
 
-	if c.ServerAddress == "" {
+	if c.ServerAddress != "" {
 		c.ServerAddress = *aFlag
 	}
-	if c.BaseURL == "" {
+	if c.BaseURL != "" {
 		c.BaseURL = *bFlag
 	}
 	if c.FileStoragePath == "" {
@@ -65,6 +66,7 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 	case BaseURL:
 		return c.BaseURL, nil
 	case FileStoragePath:
+		fmt.Println("File: ", c.FileStoragePath)
 		return c.FileStoragePath, nil
 	}
 
