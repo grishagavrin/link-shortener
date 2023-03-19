@@ -47,7 +47,7 @@ func TestShortenURL(t *testing.T) {
 
 	statusCode, body := testRequest(t, ts, "POSTJSON", "/api/shorten", `"url1":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "Invalid fields in JSON\n", body)
+	assert.Equal(t, "invalid fields in JSON\n", body)
 
 	statusCode, _ = testRequest(t, ts, "POSTJSON", "/api/shorten", `"url":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusCreated, statusCode)
@@ -65,7 +65,7 @@ func TestWriteURL(t *testing.T) {
 
 	statusCode, body = testRequest(t, ts, "POST", "/", "")
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "Body is empty\n", body)
+	assert.Equal(t, "body is empty\n", body)
 }
 
 func TestGetURL(t *testing.T) {
@@ -82,5 +82,5 @@ func TestGetURL(t *testing.T) {
 
 	statusCode, body = testRequest(t, ts, "GET", "/aaa", "")
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "Enter a number type parameter\n", body)
+	assert.Equal(t, fmt.Sprintf("enter correct url parameter - length: %v\n", config.LENHASH), body)
 }

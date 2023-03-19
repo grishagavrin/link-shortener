@@ -3,39 +3,70 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 )
 
-const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
+func AddLinkInDB(inputURL string) (string, error) {
 
-func AddLinkInDB(inputURL string) string {
-	cfg := config.ConfigENV{}
-	baseURL, exists := cfg.GetEnvValue(config.BaseURL)
-	if !exists {
-		log.Fatalf("env tag is not created, %s", config.BaseURL)
+	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+	if err != nil {
+		return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)
 	}
 
 	genKey := randStringBytes(config.LENHASH)
-	urlString := RepositoryAddLik(inputURL, genKey)
-	return fmt.Sprintf("%s/%s", baseURL, urlString)
+
+	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil {
+		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
+	}
+
+	if filePath == "" {
+		urlString := RepositoryAddLink(inputURL, genKey)
+		return fmt.Sprintf("%s/%s", baseURL, urlString), nil
+	}
+
+	var urlRec = &URLRecordInFile{
+		Key: genKey,
+		URL: inputURL,
+	}
+
+	saved := RepositoryWriteFileDB(filePath, urlRec)
+	if !saved {
+		return "", fmt.Errorf("something went wrong with write file")
+	}
+
+	return fmt.Sprintf("%s/%s", baseURL, genKey), nil
 }
 
 func GetLink(id string) (string, error) {
-	url := RepositoryGetLink(id)
-	if url == "" {
-		return url, errors.New("DB doesn`t have value")
+
+	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil {
+		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
 	}
 
-	return url, nil
+	if filePath == "" {
+		url := RepositoryGetLink(id)
+		if url == "" {
+			return url, errors.New("DB doesn`t have value")
+		}
+		return url, nil
+	}
+
+	foundedURL, err := RepositoryReadFileDB(filePath, id)
+	if err != nil {
+		return "", errors.New(err.Error())
+	}
+
+	return foundedURL, nil
 }
 
 func randStringBytes(n int) string {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = hashSymbols[rand.Intn(len(hashSymbols))]
+		b[i] = config.HashSymbols[rand.Intn(len(config.HashSymbols))]
 	}
 	return string(b)
 }

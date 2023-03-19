@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -11,52 +12,60 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/storage"
 )
 
-func AddLink(w http.ResponseWriter, r *http.Request) {
+func SaveTXT(w http.ResponseWriter, r *http.Request) {
 	b, _ := io.ReadAll(r.Body)
 	body := string(b)
 
 	if body == "" {
-		http.Error(w, "Body is empty", http.StatusBadRequest)
+		http.Error(w, "body is empty", http.StatusBadRequest)
 		return
 	}
 
-	dbURL := storage.AddLinkInDB(body)
+	res, err := storage.AddLinkInDB(body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(dbURL))
+	w.Write([]byte(res))
 }
 
 func GetLink(w http.ResponseWriter, r *http.Request) {
 	q := chi.URLParam(r, "id")
 	if len(q) != config.LENHASH {
-		http.Error(w, "Enter a number type parameter", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("enter correct url parameter - length: %v", config.LENHASH), http.StatusBadRequest)
 		return
 	}
 
 	foundedURL, err := storage.GetLink(q)
 	if err != nil {
-		http.Error(w, "The id parametr not found in DB", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	http.Redirect(w, r, foundedURL, http.StatusTemporaryRedirect)
 }
 
-func ShortenURL(w http.ResponseWriter, r *http.Request) {
+func SaveJSON(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	reqBody := struct {
 		URL string `json:"url"`
 	}{}
 
-	decodeJSON := json.NewDecoder(strings.NewReader(string(body)))
-	decodeJSON.DisallowUnknownFields()
+	decJSON := json.NewDecoder(strings.NewReader(string(body)))
+	decJSON.DisallowUnknownFields()
 
-	if err := decodeJSON.Decode(&reqBody); err != nil {
-		http.Error(w, "Invalid fields in JSON", http.StatusBadRequest)
+	if err := decJSON.Decode(&reqBody); err != nil {
+		http.Error(w, "invalid fields in JSON", http.StatusBadRequest)
 		return
 	}
 
-	dbURL := storage.AddLinkInDB(reqBody.URL)
+	dbURL, err := storage.AddLinkInDB(reqBody.URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	resBody := struct {
 		ValueDB string `json:"result"`
 	}{
