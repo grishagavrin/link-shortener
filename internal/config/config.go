@@ -30,7 +30,7 @@ func Instance() *myConfig {
 	if instance == nil {
 		instance = new(myConfig)
 		instance.initENV()
-		// instance.initFlags()
+		instance.initFlags()
 	}
 	return instance
 }
@@ -42,18 +42,18 @@ func (c *myConfig) initENV() {
 }
 
 func (c *myConfig) initFlags() {
-	aFlag := flag.String("a", ":8080", "default host and port")
-	bFlag := flag.String("b", "http://localhost", "base url for response query")
-	fFlag := flag.String("f", "", "file storage")
+	aFlag := flag.String("a", "", "")
+	bFlag := flag.String("b", "", "")
+	fFlag := flag.String("f", "", "")
 	flag.Parse()
 
-	if c.ServerAddress == "" {
+	if *aFlag != "" {
 		c.ServerAddress = *aFlag
 	}
-	if c.BaseURL == "" {
+	if *bFlag != "" {
 		c.BaseURL = *bFlag
 	}
-	if c.FileStoragePath == "" {
+	if *fFlag != "" {
 		c.FileStoragePath = *fFlag
 	}
 }
