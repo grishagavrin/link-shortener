@@ -44,7 +44,7 @@ func (c *myConfig) initENV() {
 func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", "127.0.0.1:8080", "default host and port")
 	bFlag := flag.String("b", "http://localhost:8080", "base url for response query")
-	fFlag := flag.String("f", "./File.DB.log", "file storage")
+	fFlag := flag.String("f", "", "file storage")
 	flag.Parse()
 
 	if c.ServerAddress == "" {
