@@ -29,8 +29,8 @@ var instance *myConfig
 func Instance() *myConfig {
 	if instance == nil {
 		instance = new(myConfig)
-		instance.initENV()
 		instance.initFlags()
+		instance.initENV()
 	}
 	return instance
 }
