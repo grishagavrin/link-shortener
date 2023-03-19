@@ -54,7 +54,7 @@ func (c *myConfig) initFlags() {
 	if c.BaseURL != "" {
 		c.BaseURL = *bFlag
 	}
-	if c.FileStoragePath == "" {
+	if c.FileStoragePath != "" {
 		c.FileStoragePath = *fFlag
 	}
 }
