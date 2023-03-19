@@ -30,9 +30,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}
-
-	// err = http.ListenAndServe(serv, routes.ServiceRouter())
-	// if err != nil {
-	// 	log.Fatalf("Could not start server: %v", err)
-	// }
 }

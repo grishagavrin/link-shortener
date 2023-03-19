@@ -30,7 +30,7 @@ func Instance() *myConfig {
 	if instance == nil {
 		instance = new(myConfig)
 		instance.initENV()
-		// instance.initFlags()
+		instance.initFlags()
 	}
 	return instance
 }
@@ -44,7 +44,7 @@ func (c *myConfig) initENV() {
 func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", "127.0.0.1:8080", "default host and port")
 	bFlag := flag.String("b", "http://localhost:8080", "base url for response query")
-	fFlag := flag.String("f", "", "file storage")
+	fFlag := flag.String("f", "./File.DB.log", "file storage")
 	flag.Parse()
 
 	if c.ServerAddress == "" {
@@ -70,19 +70,3 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 
 	return "", errUnknownParam
 }
-
-// func (c *MyConfig) GetEnvValue(fieldName string) (string, bool) {
-// 	if err := env.Parse(c); err != nil {
-// 		log.Fatalf("can`t load ENV %+v\n", err)
-// 	}
-
-// 	values := reflect.ValueOf(*c)
-// 	typesOf := values.Type()
-// 	for i := 0; i < values.NumField(); i++ {
-// 		if typesOf.Field(i).Name == fieldName {
-// 			return values.Field(i).String(), true
-// 		}
-// 	}
-
-// 	return "", false
-// }

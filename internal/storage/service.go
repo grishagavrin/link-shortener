@@ -9,23 +9,12 @@ import (
 )
 
 func AddLinkInDB(inputURL string) (string, error) {
-	// cfg := config.MyConfig{}
-	// baseURL, exists := cfg.GetEnvValue(config.BaseURL)
-	// if !exists {
-	// 	return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)
-	// }
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
 		return "", fmt.Errorf("env tag is not created, %s", config.BaseURL)
 	}
 
 	genKey := randStringBytes(config.LENHASH)
-
-	// filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
-	// if !exists || filePath == "" {
-	// 	urlString := RepositoryAddLink(inputURL, genKey)
-	// 	return fmt.Sprintf("%s/%s", baseURL, urlString), nil
-	// }
 
 	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
 	if err != nil {
