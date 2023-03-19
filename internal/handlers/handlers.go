@@ -44,6 +44,8 @@ func GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println(foundedURL)
+
 	http.Redirect(w, r, foundedURL, http.StatusTemporaryRedirect)
 }
 

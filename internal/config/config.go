@@ -63,7 +63,7 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 	case ServerAddress:
 		return c.ServerAddress, nil
 	case BaseURL:
-		return c.BaseURL + c.ServerAddress, nil
+		return c.BaseURL, nil
 	case FileStoragePath:
 		return c.FileStoragePath, nil
 	}
