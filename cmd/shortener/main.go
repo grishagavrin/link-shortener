@@ -1,6 +1,7 @@
 package main
 
-// nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+// macOS: nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+// wnd: nodemon --watch ../../ --exec go run main.go --signal SIGKILL
 // go test ./... -v
 
 import (
@@ -14,14 +15,24 @@ import (
 
 func main() {
 	cfg := config.Instance()
-	serv, err := cfg.GetCfgValue(config.ServerAddress)
+	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Server started on %s\n", serv)
 
-	err = http.ListenAndServe(serv, routes.ServiceRouter())
+	srv := &http.Server{
+		Addr:    srvAddr,
+		Handler: routes.ServiceRouter(),
+	}
+
+	fmt.Printf("Server started on %s\n", srvAddr)
+	err = srv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}
+
+	// err = http.ListenAndServe(serv, routes.ServiceRouter())
+	// if err != nil {
+	// 	log.Fatalf("Could not start server: %v", err)
+	// }
 }
