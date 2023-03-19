@@ -9,8 +9,8 @@ import (
 func ServiceRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Get("/{id}", handlers.GetURL)
-	r.Post("/", handlers.WriteURL)
-
+	r.Get("/{id}", handlers.GetLink)
+	r.Post("/", handlers.AddLink)
+	r.Post("/api/shorten", handlers.ShortenURL)
 	return r
 }

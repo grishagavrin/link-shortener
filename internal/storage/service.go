@@ -1,15 +1,34 @@
 package storage
 
-func GetURLByID(id string) (RedirectURL, error) {
-	url, err := RepositoryGetURLByID(id)
+import (
+	"errors"
+	"fmt"
+	"math/rand"
 
-	if err != nil {
-		return url, err
+	"github.com/grishagavrin/link-shortener/internal/config"
+)
+
+const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
+
+func AddLinkInDB(inputURL string) string {
+	genKey := randStringBytes(config.LENHASH)
+	urlString := RepositoryAddLik(inputURL, genKey)
+	return fmt.Sprintf("http://localhost:8080/%s", urlString)
+}
+
+func GetLink(id string) (string, error) {
+	url := RepositoryGetLink(id)
+	if url == "" {
+		return url, errors.New("DB doesn`t have value")
 	}
 
 	return url, nil
 }
 
-func AddURL(inputURL string) RedirectURL {
-	return RepositoryAddURL(inputURL)
+func randStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = hashSymbols[rand.Intn(len(hashSymbols))]
+	}
+	return string(b)
 }
