@@ -61,11 +61,17 @@ func (c *myConfig) initFlags() {
 func (c *myConfig) GetCfgValue(env string) (string, error) {
 	switch env {
 	case ServerAddress:
-		return c.ServerAddress, nil
+		if c.ServerAddress != "" {
+			return c.ServerAddress, nil
+		}
 	case BaseURL:
-		return c.BaseURL, nil
+		if c.BaseURL != "" {
+			return c.BaseURL, nil
+		}
 	case FileStoragePath:
-		return c.FileStoragePath, nil
+		if c.FileStoragePath != "" {
+			return c.FileStoragePath, nil
+		}
 	}
 
 	return "", errUnknownParam
