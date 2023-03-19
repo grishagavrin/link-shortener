@@ -12,8 +12,8 @@ var errUnknownParam = errors.New("unknown env or flag param")
 
 type myConfig struct {
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./FileDB.log"`
+	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 }
 
 const (
@@ -44,7 +44,7 @@ func (c *myConfig) initENV() {
 func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", "127.0.0.1:8080", "default host and port")
 	bFlag := flag.String("b", "http://localhost:8080", "base url for response query")
-	fFlag := flag.String("f", "./FileDB.log", "file storage")
+	fFlag := flag.String("f", "", "file storage")
 	flag.Parse()
 
 	if c.ServerAddress == "" {

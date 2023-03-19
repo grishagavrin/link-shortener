@@ -12,7 +12,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/storage"
 )
 
-func AddLink(w http.ResponseWriter, r *http.Request) {
+func SaveTXT(w http.ResponseWriter, r *http.Request) {
 	b, _ := io.ReadAll(r.Body)
 	body := string(b)
 
@@ -47,7 +47,7 @@ func GetLink(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, foundedURL, http.StatusTemporaryRedirect)
 }
 
-func ShortenURL(w http.ResponseWriter, r *http.Request) {
+func SaveJSON(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	reqBody := struct {
 		URL string `json:"url"`

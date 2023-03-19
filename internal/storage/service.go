@@ -32,6 +32,11 @@ func AddLinkInDB(inputURL string) (string, error) {
 		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
 	}
 
+	if filePath == "" {
+		urlString := RepositoryAddLink(inputURL, genKey)
+		return fmt.Sprintf("%s/%s", baseURL, urlString), nil
+	}
+
 	var urlRec = &URLRecordInFile{
 		Key: genKey,
 		URL: inputURL,
@@ -46,15 +51,12 @@ func AddLinkInDB(inputURL string) (string, error) {
 }
 
 func GetLink(id string) (string, error) {
-	// cfg := config.MyConfig{}
-	// filePath, exists := cfg.GetEnvValue(config.FileStoragePath)
 
 	filePath, err := config.Instance().GetCfgValue(config.FileStoragePath)
 	if err != nil {
 		return "", fmt.Errorf("env tag is not created, %s", config.FileStoragePath)
 	}
 
-	// if !exists || filePath == "" {
 	if filePath == "" {
 		url := RepositoryGetLink(id)
 		if url == "" {
