@@ -8,6 +8,7 @@ import (
 
 func ServiceRouter() chi.Router {
 	r := chi.NewRouter()
+
 	r.Use(middleware.Recoverer)
 	r.Get("/{id}", handlers.GetLink)
 	r.Post("/", handlers.AddLink)

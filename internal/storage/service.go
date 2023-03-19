@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -11,9 +12,15 @@ import (
 const hashSymbols = "1234567890qwertyuiopasdfghjklzxcvbnm"
 
 func AddLinkInDB(inputURL string) string {
+	cfg := config.ConfigENV{}
+	baseURL, exists := cfg.GetEnvValue(config.BaseURL)
+	if !exists {
+		log.Fatalf("env tag is not created, %s", config.BaseURL)
+	}
+
 	genKey := randStringBytes(config.LENHASH)
 	urlString := RepositoryAddLik(inputURL, genKey)
-	return fmt.Sprintf("http://localhost:8080/%s", urlString)
+	return fmt.Sprintf("%s/%s", baseURL, urlString)
 }
 
 func GetLink(id string) (string, error) {
