@@ -10,8 +10,10 @@ func ServiceRouter() chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
+	r.Use(handlers.GzipMiddleware)
 	r.Get("/{id}", handlers.GetLink)
 	r.Post("/", handlers.SaveTXT)
 	r.Post("/api/shorten", handlers.SaveJSON)
+
 	return r
 }
