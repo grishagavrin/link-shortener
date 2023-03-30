@@ -47,7 +47,7 @@ func TestShortenURL(t *testing.T) {
 
 	statusCode, body := testRequest(t, ts, "POSTJSON", "/api/shorten", `"url1":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "invalid fields in JSON\n", body)
+	assert.Equal(t, "invalid fields in json\n", body)
 
 	statusCode, _ = testRequest(t, ts, "POSTJSON", "/api/shorten", `"url":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusCreated, statusCode)

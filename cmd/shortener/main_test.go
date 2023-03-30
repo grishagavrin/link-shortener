@@ -39,6 +39,6 @@ func TestServerRun(t *testing.T) {
 	assert.Equal(t, http.StatusOK, statusCode)
 
 	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
-	assert.Equal(t, "invalid fields in JSON\n", body)
+	assert.Equal(t, "invalid fields in json\n", body)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
 }
