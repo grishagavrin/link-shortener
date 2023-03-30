@@ -1,9 +1,5 @@
 package main
 
-// macOS: nodemon --watch ../../ --exec go run main.go --signal SIGTERM
-// wnd: nodemon --watch ../../ --exec go run main.go --signal SIGKILL
-// go test ./... -v
-
 import (
 	"fmt"
 	"log"
@@ -14,8 +10,7 @@ import (
 )
 
 func main() {
-	cfg := config.Instance()
-	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
+	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
