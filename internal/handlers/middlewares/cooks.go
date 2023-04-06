@@ -8,18 +8,18 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/utils"
 )
 
-const CookieTagIdName = "user_id"
+const CookieTagIDName = "user_id"
 
 func CooksMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := uuid.New().String()
-		if cookieUserID, err := r.Cookie(CookieTagIdName); err == nil {
+		if cookieUserID, err := r.Cookie(CookieTagIDName); err == nil {
 			_ = utils.Decode(cookieUserID.Value, &userID)
 		}
 		encoded, err := utils.Encode(userID)
 		if err == nil {
 			cookie := &http.Cookie{
-				Name:  CookieTagIdName,
+				Name:  CookieTagIDName,
 				Value: encoded,
 				Path:  "/",
 			}

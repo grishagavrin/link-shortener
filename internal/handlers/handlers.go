@@ -95,7 +95,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cook, _ := req.Cookie(middlewares.CookieTagIdName)
+	cook, _ := req.Cookie(middlewares.CookieTagIDName)
 
 	dbURL, err := h.s.SaveLinkDB(user.UniqUser(cook.Value), storage.ShortURL(reqBody.URL))
 	if err != nil {
@@ -121,7 +121,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	cook, _ := req.Cookie(middlewares.CookieTagIdName)
+	cook, _ := req.Cookie(middlewares.CookieTagIDName)
 	links, err := h.s.LinksByUser(user.UniqUser(cook.Value))
 	if err != nil {
 		http.Error(res, errNoContent.Error(), http.StatusNoContent)
