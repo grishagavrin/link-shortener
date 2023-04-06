@@ -10,9 +10,10 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
 	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
+	"github.com/grishagavrin/link-shortener/internal/user"
 )
 
 type Handler struct {
@@ -23,66 +24,65 @@ var errEmptyBody = errors.New("body is empty")
 var errFieldsJSON = errors.New("invalid fields in json")
 var errInternalSrv = errors.New("internal error on server")
 var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
+var errNoContent = errors.New("no content")
 
 func New() (h *Handler, err error) {
-	// If set file storage path
-	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
-	if err != nil || fs == "" {
-		return &Handler{s: ramstorage.New()}, nil
-	} else {
-		return &Handler{s: filestorage.New()}, nil
-	}
-}
-
-func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
-	q := chi.URLParam(r, "id")
-	if len(q) != config.LENHASH {
-		http.Error(w, errCorrectURL.Error(), http.StatusBadRequest)
-		return
-	}
-
-	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
+	r, err := ramstorage.New()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		return nil, err
+	}
+	return &Handler{s: r}, nil
+}
+
+func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
+	q := chi.URLParam(req, "id")
+	if len(q) != config.LENHASH {
+		http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
-	http.Redirect(w, r, string(foundedURL), http.StatusTemporaryRedirect)
+	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
-func (h *Handler) SaveTXT(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusBadRequest)
 	}
 
-	b, _ := io.ReadAll(r.Body)
+	b, _ := io.ReadAll(req.Body)
 	body := string(b)
 
 	if body == "" {
-		http.Error(w, errEmptyBody.Error(), http.StatusBadRequest)
+		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
+	cook, _ := req.Cookie("user_id")
 
-	urlKey, err := h.s.SaveLinkDB(storage.ShortURL(body))
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(cook.Value), storage.ShortURL(body))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	res := fmt.Sprintf("%s/%s", baseURL, urlKey)
-
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(res))
+	response := fmt.Sprintf("%s/%s", baseURL, urlKey)
+	res.WriteHeader(http.StatusCreated)
+	res.Write([]byte(response))
 }
 
-func (h *Handler) SaveJSON(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusBadRequest)
 	}
 
-	body, _ := io.ReadAll(r.Body)
+	body, _ := io.ReadAll(req.Body)
 	reqBody := struct {
 		URL string `json:"url"`
 	}{}
@@ -91,13 +91,15 @@ func (h *Handler) SaveJSON(w http.ResponseWriter, r *http.Request) {
 	decJSON.DisallowUnknownFields()
 
 	if err := decJSON.Decode(&reqBody); err != nil {
-		http.Error(w, errFieldsJSON.Error(), http.StatusBadRequest)
+		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
 
-	dbURL, err := h.s.SaveLinkDB(storage.ShortURL(reqBody.URL))
+	cook, _ := req.Cookie(middlewares.CookieTagIdName)
+
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(cook.Value), storage.ShortURL(reqBody.URL))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -107,13 +109,48 @@ func (h *Handler) SaveJSON(w http.ResponseWriter, r *http.Request) {
 		Result: fmt.Sprintf("%s/%s", baseURL, dbURL),
 	}
 
-	res, err := json.Marshal(resBody)
+	js, err := json.Marshal(resBody)
 	if err != nil {
-		http.Error(w, errInternalSrv.Error(), http.StatusInternalServerError)
+		http.Error(res, errInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("content-type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	w.Write(res)
+	res.Header().Set("content-type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	res.Write(js)
+}
+
+func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
+	cook, _ := req.Cookie(middlewares.CookieTagIdName)
+	links, err := h.s.LinksByUser(user.UniqUser(cook.Value))
+	if err != nil {
+		http.Error(res, errNoContent.Error(), http.StatusNoContent)
+		return
+	}
+
+	type coupleLinks struct {
+		Short  string `json:"short_url"`
+		Origin string `json:"original_url"`
+	}
+	var lks []coupleLinks
+
+	baseURL, _ := config.Instance().GetCfgValue(config.BaseURL)
+
+	//Put all links
+	for k, v := range links {
+		lks = append(lks, coupleLinks{
+			Short:  fmt.Sprintf("%s/%s", baseURL, string(k)),
+			Origin: string(v),
+		})
+	}
+
+	body, err := json.Marshal(lks)
+	if err == nil {
+		res.Header().Add("Content-Type", "application/json; charset=utf-8")
+		res.WriteHeader(http.StatusOK)
+		_, err = res.Write(body)
+		if err == nil {
+			return
+		}
+	}
 }

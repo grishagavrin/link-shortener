@@ -6,6 +6,8 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/storage"
+	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
+	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 )
 
@@ -13,33 +15,82 @@ var errNotFoundURL = errors.New("url not found in DB")
 
 type RAMStorage struct {
 	MU sync.Mutex
-	DB map[storage.URLKey]storage.ShortURL
+	DB map[user.UniqUser]storage.ShortLinks
 }
 
-func New() *RAMStorage {
-	return &RAMStorage{
-		DB: make(map[storage.URLKey]storage.ShortURL),
+func New() (*RAMStorage, error) {
+	r := &RAMStorage{
+		DB: make(map[user.UniqUser]storage.ShortLinks),
 	}
+	if err := r.Load(); err != nil {
+		return r, err
+	}
+	return r, nil
 }
 
-func (r *RAMStorage) SaveLinkDB(url storage.ShortURL) (storage.URLKey, error) {
+func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, error) {
+	shorts, ok := r.DB[userID]
+	if !ok {
+		return shorts, errNotFoundURL
+	}
+
+	return shorts, nil
+}
+
+func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	key := utils.RandStringBytes(config.LENHASH)
+	key, err := utils.RandStringBytes()
+	if err != nil {
+		return "", err
+	}
 
-	if _, ok := r.DB[key]; !ok {
-		r.DB[key] = url
+	currentURL := storage.ShortLinks{}
+	if urls, ok := r.DB[userID]; ok {
+		currentURL = urls
+	}
+
+	currentURL[key] = url
+	r.DB[userID] = currentURL
+	r.DB["all"] = currentURL
+
+	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil || fs == "" {
+		return key, nil
+	}
+
+	if err = filestorage.Write(fs, r.DB); err != nil {
+		return "", err
 	}
 
 	return key, nil
+
 }
 
-func (r *RAMStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
+func (r *RAMStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	v, ok := r.DB[key]
+	shorts, ok := r.DB[userID]
 	if !ok {
-		return v, errNotFoundURL
+		return "", errNotFoundURL
 	}
-	return v, nil
+
+	url, ok := shorts[key]
+	if !ok {
+		return "", errNotFoundURL
+	}
+
+	return url, nil
+}
+
+// Load all links to map
+func (r *RAMStorage) Load() error {
+	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil || fs == "" {
+		return nil
+	}
+	if err := filestorage.Read(fs, &r.DB); err != nil {
+		return err
+	}
+	return nil
 }
