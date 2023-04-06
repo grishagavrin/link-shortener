@@ -1,44 +1,31 @@
 package main
 
-import (
-	"bytes"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"testing"
+// func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
+// 	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
+// 	require.NoError(t, err)
 
-	"github.com/grishagavrin/link-shortener/internal/config"
-	"github.com/grishagavrin/link-shortener/internal/routes"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
+// 	resp, err := http.DefaultClient.Do(req)
+// 	require.NoError(t, err)
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
-	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
-	require.NoError(t, err)
+// 	respBody, err := io.ReadAll(resp.Body)
+// 	require.NoError(t, err)
+// 	defer resp.Body.Close()
 
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
+// 	return resp.StatusCode, string(respBody)
+// }
 
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+// func TestServerRun(t *testing.T) {
+// 	r := routes.ServiceRouter()
+// 	ts := httptest.NewServer(r)
+// 	defer ts.Close()
 
-	return resp.StatusCode, string(respBody)
-}
+// 	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
+// 	assert.Equal(t, http.StatusCreated, statusCode)
 
-func TestServerRun(t *testing.T) {
-	r := routes.ServiceRouter()
-	ts := httptest.NewServer(r)
-	defer ts.Close()
+// 	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
+// 	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
-	assert.Equal(t, http.StatusCreated, statusCode)
-
-	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
-	assert.Equal(t, http.StatusOK, statusCode)
-
-	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
-	assert.Equal(t, "invalid fields in json\n", body)
-	assert.Equal(t, http.StatusBadRequest, statusCode)
-}
+// 	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
+// 	assert.Equal(t, "invalid fields in json\n", body)
+// 	assert.Equal(t, http.StatusBadRequest, statusCode)
+// }

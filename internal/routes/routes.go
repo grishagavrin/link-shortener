@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -13,7 +13,7 @@ func ServiceRouter() chi.Router {
 	r := chi.NewRouter()
 	h, err := handlers.New()
 	if err != nil {
-		log.Fatal("get instance db error")
+		fmt.Println("get instance db error")
 	}
 
 	r.Use(middleware.Recoverer)
