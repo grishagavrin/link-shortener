@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
+	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 )
 
 func ServiceRouter() chi.Router {
@@ -14,9 +15,8 @@ func ServiceRouter() chi.Router {
 		fmt.Printf("get instance db error: %s", err.Error())
 	}
 
-	// r.Use(middleware.Recoverer)
-	// r.Use(middlewares.GzipMiddleware)
-	// r.Use(middlewares.CooksMiddleware)
+	r.Use(middlewares.GzipMiddleware)
+	r.Use(middlewares.CooksMiddleware)
 	r.Get("/{id}", h.GetLink)
 	r.Get("/user/urls", h.GetLinks)
 	r.Post("/", h.SaveTXT)

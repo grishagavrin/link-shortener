@@ -27,14 +27,17 @@ func Decode(shaUserID string, userID *string) error {
 	if err := keyInit(); err != nil {
 		return err
 	}
+
 	dst, err := hex.DecodeString(shaUserID)
 	if err != nil {
 		return err
 	}
+
 	src, err := encInstance.aesGCM.Open(nil, encInstance.nonce, dst, nil)
 	if err != nil {
 		return err
 	}
+
 	*userID = string(src)
 	return nil
 }
@@ -61,10 +64,12 @@ func keyInit() error {
 		if err != nil {
 			return err
 		}
+
 		aesGCM, err := cipher.NewGCM(aesBlock)
 		if err != nil {
 			return err
 		}
+
 		nonce, err := generateRandomBytes(aesGCM.NonceSize())
 		if err != nil {
 			return err

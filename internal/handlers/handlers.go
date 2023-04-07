@@ -41,7 +41,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser(middlewares.CookieDefaultTag), storage.URLKey(q))
+	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
