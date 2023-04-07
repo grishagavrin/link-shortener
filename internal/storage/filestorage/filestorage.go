@@ -24,8 +24,6 @@ func Write(path string, data interface{}) error {
 		}
 	}(f)
 
-	// logger.Info("Write data to storage", zap.Reflect("data", data))
-	// Convert to gob
 	buffer := bufio.NewWriter(f)
 	ge := gob.NewEncoder(buffer)
 	// encode
@@ -55,6 +53,5 @@ func Read(path string, data interface{}) error {
 			return err
 		}
 	}
-	// logger.Info("Read data from storage: "+path, zap.Reflect("data", data))
 	return nil
 }

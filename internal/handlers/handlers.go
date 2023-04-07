@@ -31,6 +31,7 @@ func New() (h *Handler, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Handler{s: r}, nil
 }
 
@@ -63,9 +64,14 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
-	cook, _ := req.Cookie("user_id")
+	cook := "default"
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(cook.Value), storage.ShortURL(body))
+	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	if err == nil {
+		cook = cookFromReq.Value
+	}
+
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(cook), storage.ShortURL(body))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -94,10 +100,15 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
+	cook := "default"
 
-	cook, _ := req.Cookie(middlewares.CookieTagIDName)
+	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	if err == nil {
+		cook = cookFromReq.Value
+	}
 
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(cook.Value), storage.ShortURL(reqBody.URL))
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(cook), storage.ShortURL(reqBody.URL))
+
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
@@ -121,8 +132,14 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	cook, _ := req.Cookie(middlewares.CookieTagIDName)
-	links, err := h.s.LinksByUser(user.UniqUser(cook.Value))
+	// cook, _ := req.Cookie(middlewares.CookieTagIDName)
+	cook := "default"
+
+	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	if err == nil {
+		cook = cookFromReq.Value
+	}
+	links, err := h.s.LinksByUser(user.UniqUser(cook))
 	if err != nil {
 		http.Error(res, errNoContent.Error(), http.StatusNoContent)
 		return

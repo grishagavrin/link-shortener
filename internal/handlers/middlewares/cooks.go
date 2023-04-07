@@ -16,6 +16,7 @@ func CooksMiddleware(next http.Handler) http.Handler {
 		if cookieUserID, err := r.Cookie(CookieTagIDName); err == nil {
 			_ = utils.Decode(cookieUserID.Value, &userID)
 		}
+
 		encoded, err := utils.Encode(userID)
 		if err == nil {
 			cookie := &http.Cookie{
