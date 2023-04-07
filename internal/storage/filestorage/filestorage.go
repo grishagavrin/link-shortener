@@ -47,6 +47,7 @@ func Read(path string, data interface{}) error {
 			panic(ErrFileStorageNotClose)
 		}
 	}(f)
+
 	gd := gob.NewDecoder(f)
 	if err := gd.Decode(data); err != nil {
 		if err != io.EOF {

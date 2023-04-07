@@ -31,7 +31,6 @@ func New() (h *Handler, err error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &Handler{s: r}, nil
 }
 
@@ -42,7 +41,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
+	foundedURL, err := h.s.GetLinkDB(user.UniqUser(middlewares.CookieDefaultTag), storage.URLKey(q))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -64,7 +63,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := "all"
+	cook := middlewares.CookieDefaultTag
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {
@@ -100,7 +99,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := "all"
+	cook := middlewares.CookieDefaultTag
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {
@@ -132,8 +131,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	// cook, _ := req.Cookie(middlewares.CookieTagIDName)
-	cook := "all"
+	cook := middlewares.CookieDefaultTag
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {

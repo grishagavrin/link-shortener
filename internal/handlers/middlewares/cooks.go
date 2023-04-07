@@ -9,6 +9,7 @@ import (
 )
 
 const CookieTagIDName = "user_id"
+const CookieDefaultTag = "all"
 
 func CooksMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
