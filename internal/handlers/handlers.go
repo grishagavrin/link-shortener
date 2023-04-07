@@ -64,7 +64,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := "default"
+	cook := "all"
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {
@@ -100,7 +100,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := "default"
+	cook := "all"
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {
@@ -133,7 +133,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	// cook, _ := req.Cookie(middlewares.CookieTagIDName)
-	cook := "default"
+	cook := "all"
 
 	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
 	if err == nil {
@@ -149,6 +149,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 		Short  string `json:"short_url"`
 		Origin string `json:"original_url"`
 	}
+
 	var lks []coupleLinks
 
 	baseURL, _ := config.Instance().GetCfgValue(config.BaseURL)
