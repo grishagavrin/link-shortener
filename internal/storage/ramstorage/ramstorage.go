@@ -44,7 +44,7 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	key, err := utils.RandStringBytes(config.LENHASH)
+	key, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err
 	}

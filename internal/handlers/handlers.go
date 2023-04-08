@@ -25,8 +25,7 @@ type Handler struct {
 var errEmptyBody = errors.New("body is empty")
 var errFieldsJSON = errors.New("invalid fields in json")
 var errInternalSrv = errors.New("internal error on server")
-
-// var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
+var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
 var errNoContent = errors.New("no content")
 
 func New() (h *Handler, err error) {
@@ -39,10 +38,10 @@ func New() (h *Handler, err error) {
 
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	q := chi.URLParam(req, "id")
-	// if len(q) != config.LENHASH {
-	// 	http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
-	// 	return
-	// }
+	if len(q) != config.LENHASH {
+		http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
+		return
+	}
 
 	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
 	if err == nil {

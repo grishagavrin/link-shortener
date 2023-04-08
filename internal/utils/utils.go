@@ -97,12 +97,10 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func RandStringBytes(n int) (storage.URLKey, error) {
-	b := make([]byte, config.LENHASH)
-	_, err := rand.Read(b)
+func RandStringBytes() (storage.URLKey, error) {
+	b, err := generateRandom(config.LENHASH / 2)
 	if err != nil {
-		return "", errMathRand
+		return "", err
 	}
-
 	return storage.URLKey(hex.EncodeToString(b)), nil
 }
