@@ -13,6 +13,10 @@ import (
 
 var errNotFoundURL = errors.New("url not found in DB")
 
+type UserStorage struct {
+	data map[user.UniqUser]storage.ShortURL
+}
+
 type RAMStorage struct {
 	MU sync.Mutex
 	DB map[user.UniqUser]storage.ShortLinks
@@ -40,7 +44,7 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	key, err := utils.RandStringBytes()
+	key, err := utils.RandStringBytes(config.LENHASH)
 	if err != nil {
 		return "", err
 	}
@@ -59,12 +63,8 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 		return key, nil
 	}
 
-	if err = filestorage.Write(fs, r.DB); err != nil {
-		return "", err
-	}
-
+	_ = filestorage.Write(fs, r.DB)
 	return key, nil
-
 }
 
 func (r *RAMStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
@@ -86,6 +86,7 @@ func (r *RAMStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storag
 // Load all links to map
 func (r *RAMStorage) Load() error {
 	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// If file storage not exists
 	if err != nil || fs == "" {
 		return nil
 	}

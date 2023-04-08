@@ -11,9 +11,11 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
+	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -23,7 +25,8 @@ type Handler struct {
 var errEmptyBody = errors.New("body is empty")
 var errFieldsJSON = errors.New("invalid fields in json")
 var errInternalSrv = errors.New("internal error on server")
-var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
+
+// var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
 var errNoContent = errors.New("no content")
 
 func New() (h *Handler, err error) {
@@ -36,18 +39,19 @@ func New() (h *Handler, err error) {
 
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	q := chi.URLParam(req, "id")
-	if len(q) != config.LENHASH {
-		http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
-		return
-	}
+	// if len(q) != config.LENHASH {
+	// 	http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
+	// 	return
+	// }
 
 	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+	if err == nil {
+		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 		return
+	} else {
+		logger.Info("Get error", zap.Error(err))
 	}
-
-	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
+	http.Error(res, err.Error(), http.StatusBadRequest)
 }
 
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
@@ -63,14 +67,14 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := middlewares.CookieDefaultTag
 
-	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	userID := middlewares.CookieUserIDDefault
+	cook, err := req.Cookie(middlewares.CookieUserIDName)
 	if err == nil {
-		cook = cookFromReq.Value
+		userID = cook.Value
 	}
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(cook), storage.ShortURL(body))
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -99,15 +103,14 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
-	cook := middlewares.CookieDefaultTag
 
-	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	userID := middlewares.CookieUserIDDefault
+	cook, err := req.Cookie(middlewares.CookieUserIDName)
 	if err == nil {
-		cook = cookFromReq.Value
+		userID = cook.Value
 	}
 
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(cook), storage.ShortURL(reqBody.URL))
-
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
@@ -131,13 +134,12 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	cook := middlewares.CookieDefaultTag
-
-	cookFromReq, err := req.Cookie(middlewares.CookieTagIDName)
+	userID := middlewares.CookieUserIDDefault
+	cook, err := req.Cookie(middlewares.CookieUserIDName)
 	if err == nil {
-		cook = cookFromReq.Value
+		userID = cook.Value
 	}
-	links, err := h.s.LinksByUser(user.UniqUser(cook))
+	links, err := h.s.LinksByUser(user.UniqUser(userID))
 	if err != nil {
 		http.Error(res, errNoContent.Error(), http.StatusNoContent)
 		return
@@ -147,12 +149,10 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 		Short  string `json:"short_url"`
 		Origin string `json:"original_url"`
 	}
-
 	var lks []coupleLinks
-
 	baseURL, _ := config.Instance().GetCfgValue(config.BaseURL)
 
-	//Put all links
+	// Get all links
 	for k, v := range links {
 		lks = append(lks, coupleLinks{
 			Short:  fmt.Sprintf("%s/%s", baseURL, string(k)),
@@ -162,6 +162,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 
 	body, err := json.Marshal(lks)
 	if err == nil {
+		// Prepare response
 		res.Header().Add("Content-Type", "application/json; charset=utf-8")
 		res.WriteHeader(http.StatusOK)
 		_, err = res.Write(body)
