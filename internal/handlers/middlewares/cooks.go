@@ -1,6 +1,8 @@
 package middlewares
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -9,8 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
-const CookieUserIDName = "user_id"
-const CookieUserIDDefault = "default"
+type ContextType string
+
+var CookieUserIDName = "userId"
+var CookieUserIDDefault = "default"
+
+// ContextType set context name for user id
+var UserIDCtxName ContextType = "ctxUserId"
 
 func CooksMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -25,16 +32,18 @@ func CooksMiddleware(next http.Handler) http.Handler {
 		encoded, err := utils.Encode(userID)
 		// logger.Info("UserID", zap.String("ID", userID))
 		// logger.Info("User encoded", zap.String("Encoded", encoded))
+		fmt.Println("COOKIE VAL:", encoded)
 		if err == nil {
-			cookie := &http.Cookie{
-				Name:  CookieUserIDName,
-				Value: encoded,
-				Path:  "/",
+			cookie := http.Cookie{
+				Name:     "userId",
+				Value:    encoded,
+				Path:     "/",
+				HttpOnly: true,
 			}
-			http.SetCookie(w, cookie)
+			http.SetCookie(w, &cookie)
 		} else {
 			logger.Info("Encode cookie error", zap.Error(err))
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserIDCtxName, userID)))
 	})
 }

@@ -20,6 +20,6 @@ func ServiceRouter() chi.Router {
 	r.Get("/{id}", h.GetLink)
 	r.Post("/", h.SaveTXT)
 	r.Post("/api/shorten", h.SaveJSON)
-	r.Get("/user/urls", h.GetLinks)
+	r.Get("/api/user/urls", h.GetLinks)
 	return r
 }

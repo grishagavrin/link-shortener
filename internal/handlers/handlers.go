@@ -69,12 +69,14 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cook, err := req.Cookie(middlewares.CookieUserIDName)
-	if err == nil {
-		myCook = cook.Value
+	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	userID := "default"
+	if userIDCtx != nil {
+		// Convert interface type to user.UniqUser
+		userID = userIDCtx.(string)
 	}
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(myCook), storage.ShortURL(body))
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -104,13 +106,13 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cook, err := req.Cookie(middlewares.CookieUserIDName)
-	if err == nil {
-		myCook = cook.Value
+	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	userID := "default"
+	if userIDCtx != nil {
+		// Convert interface type to user.UniqUser
+		userID = userIDCtx.(string)
 	}
-
-	fmt.Printf("Handler SAVE JSON cookie -  %v\n", user.UniqUser(myCook))
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(myCook), storage.ShortURL(reqBody.URL))
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
@@ -134,11 +136,10 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	userID := middlewares.CookieUserIDDefault
-	cook, err := req.Cookie(middlewares.CookieUserIDName)
-	if err == nil {
-		userID = cook.Value
-	}
+	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	// Convert interface type to user.UniqUser
+	userID := userIDCtx.(string)
+
 	links, err := h.s.LinksByUser(user.UniqUser(userID))
 	if err != nil {
 		http.Error(res, errNoContent.Error(), http.StatusNoContent)
