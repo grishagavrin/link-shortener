@@ -28,6 +28,8 @@ var errInternalSrv = errors.New("internal error on server")
 var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
 var errNoContent = errors.New("no content")
 
+var myCook string = "default"
+
 func New() (h *Handler, err error) {
 	r, err := ramstorage.New()
 	if err != nil {
@@ -67,13 +69,12 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := middlewares.CookieUserIDDefault
 	cook, err := req.Cookie(middlewares.CookieUserIDName)
 	if err == nil {
-		userID = cook.Value
+		myCook = cook.Value
 	}
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(myCook), storage.ShortURL(body))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -103,13 +104,13 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := middlewares.CookieUserIDDefault
 	cook, err := req.Cookie(middlewares.CookieUserIDName)
 	if err == nil {
-		userID = cook.Value
+		myCook = cook.Value
 	}
 
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
+	fmt.Printf("Handler SAVE JSON cookie -  %v\n", user.UniqUser(myCook))
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(myCook), storage.ShortURL(reqBody.URL))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return

@@ -21,7 +21,6 @@ const (
 	BaseURL         = "BaseURL"
 	FileStoragePath = "FileStoragePath"
 	LENHASH         = 16
-	HashSymbols     = "1234567890qwertyuiopasdfghjklzxcvbnm"
 )
 
 var instance *myConfig

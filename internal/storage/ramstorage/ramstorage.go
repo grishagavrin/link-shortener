@@ -13,10 +13,6 @@ import (
 
 var errNotFoundURL = errors.New("url not found in DB")
 
-type UserStorage struct {
-	data map[user.UniqUser]storage.ShortURL
-}
-
 type RAMStorage struct {
 	MU sync.Mutex
 	DB map[user.UniqUser]storage.ShortLinks
@@ -49,14 +45,21 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 		return "", err
 	}
 
-	currentURL := storage.ShortLinks{}
+	currentURLUser := storage.ShortLinks{}
+	currentURLAll := storage.ShortLinks{}
 	if urls, ok := r.DB[userID]; ok {
-		currentURL = urls
+		currentURLUser = urls
 	}
 
-	currentURL[key] = url
-	r.DB[userID] = currentURL
-	r.DB["all"] = currentURL
+	currentURLUser[key] = url
+
+	r.DB[userID] = currentURLUser
+
+	if urls, ok := r.DB["all"]; ok {
+		currentURLAll = urls
+	}
+	currentURLAll[key] = url
+	r.DB["all"] = currentURLAll
 
 	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
@@ -70,6 +73,8 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 func (r *RAMStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
+	// fmt.Println(111)
+	// fmt.Println(r.DB)
 	shorts, ok := r.DB[userID]
 	if !ok {
 		return "", errNotFoundURL
