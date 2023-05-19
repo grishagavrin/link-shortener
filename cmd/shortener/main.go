@@ -3,9 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/logger"
@@ -15,8 +12,8 @@ import (
 
 func main() {
 	// Context with cancel func
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	// interrupt := make(chan os.Signal, 1)
+	// signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	l, err := logger.Instance()
 	if err != nil {
