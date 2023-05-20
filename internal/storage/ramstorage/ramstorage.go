@@ -2,6 +2,7 @@ package ramstorage
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -40,6 +41,7 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
+	fmt.Println("USERID", userID)
 	key, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err

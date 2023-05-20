@@ -15,7 +15,6 @@ type myConfig struct {
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
 	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
-	// DatabaseDSN string `env:"DATABASE_DSN" envDefault:"postgres://postgres:123456@localhost:5432/test_db"`
 }
 
 const (
@@ -34,7 +33,6 @@ func Instance() *myConfig {
 		instance.initENV()
 		instance.initFlags()
 	}
-
 	return instance
 }
 
