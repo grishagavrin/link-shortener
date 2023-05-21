@@ -27,18 +27,11 @@ type Handler struct {
 var errEmptyBody = errors.New("body is empty")
 var errFieldsJSON = errors.New("invalid fields in json")
 var errInternalSrv = errors.New("internal error on server")
-var errCorrectURL = fmt.Errorf("enter correct url parameter - length: %v", config.LENHASH)
+var errCorrectURL = fmt.Errorf("enter correct url parameter")
 var errNoContent = errors.New("no content")
+var errBadRequest = errors.New("bad request")
 
 var myCook string = "default"
-
-// func New() (h *Handler, err error) {
-// 	r, err := ramstorage.New()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &Handler{s: r}, nil
-// }
 
 func New() (*Handler, error) {
 	_, err := db.Instance()
@@ -76,6 +69,49 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		logger.Info("Get error", zap.Error(err))
 	}
 	http.Error(res, err.Error(), http.StatusBadRequest)
+}
+
+func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		setBadResponse(res, errInternalSrv)
+		return
+	}
+	var urls []storage.BatchURL
+	err = json.Unmarshal(body, &urls)
+	if err != nil {
+		setBadResponse(res, errCorrectURL)
+		return
+	}
+
+	shorts, err := h.s.SaveBatch(urls)
+	if err != nil {
+		setBadResponse(res, errInternalSrv)
+		return
+	}
+
+	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+	if err != nil {
+		setBadResponse(res, errBadRequest)
+	}
+
+	// Prepare results
+	for k := range shorts {
+		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
+	}
+	body, err = json.Marshal(shorts)
+	if err == nil {
+		// Prepare response
+		res.Header().Add("Content-Type", "application/json; charset=utf-8")
+		res.WriteHeader(http.StatusCreated)
+		_, err = res.Write(body)
+		if err == nil {
+			return
+		}
+	}
+
+	setBadResponse(res, errInternalSrv)
 }
 
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
@@ -206,4 +242,9 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+}
+
+// setBadRequest set bad response
+func setBadResponse(w http.ResponseWriter, e error) {
+	http.Error(w, e.Error(), http.StatusBadRequest)
 }
