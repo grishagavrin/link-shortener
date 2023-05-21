@@ -82,5 +82,5 @@ func TestGetURL(t *testing.T) {
 
 	statusCode, body = testRequest(t, ts, "GET", "/aaa", "")
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "enter correct url parameter", body)
+	assert.Equal(t, "enter correct url parameter\n", body)
 }
