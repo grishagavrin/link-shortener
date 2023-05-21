@@ -126,10 +126,12 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 
 	var buffer []temp
 	for _, v := range urls {
+		key, _ := utils.RandStringBytes()
+
 		var t = temp{
 			ID:     v.ID,
 			Origin: v.Origin,
-			Short:  utils.RandomString(),
+			Short:  string(key),
 		}
 		buffer = append(buffer, t)
 	}

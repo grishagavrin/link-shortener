@@ -90,6 +90,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		setBadResponse(res, errInternalSrv)
 		return
 	}
+	fmt.Println(shorts)
 
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
