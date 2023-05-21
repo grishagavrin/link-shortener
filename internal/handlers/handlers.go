@@ -13,6 +13,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
+	"github.com/grishagavrin/link-shortener/internal/storage/dbstorage"
 	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils/db"
@@ -31,12 +32,33 @@ var errNoContent = errors.New("no content")
 
 var myCook string = "default"
 
-func New() (h *Handler, err error) {
-	r, err := ramstorage.New()
-	if err != nil {
-		return nil, err
+// func New() (h *Handler, err error) {
+// 	r, err := ramstorage.New()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &Handler{s: r}, nil
+// }
+
+func New() (*Handler, error) {
+	_, err := db.Instance()
+	if err == nil {
+		logger.Info("Set db handler")
+		s, err := dbstorage.New()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		return &Handler{
+			s: s,
+		}, nil
+	} else {
+		r, err := ramstorage.New()
+		if err != nil {
+			return nil, err
+		}
+		return &Handler{s: r}, nil
 	}
-	return &Handler{s: r}, nil
 }
 
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
