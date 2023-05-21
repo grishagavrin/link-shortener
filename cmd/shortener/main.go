@@ -64,5 +64,5 @@ func main() {
 			l.Info("Closing don't close")
 		}
 	}
-
+	l.Info("Closing connect to db success")
 }
