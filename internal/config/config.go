@@ -14,12 +14,14 @@ type myConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
+	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 }
 
 const (
 	ServerAddress   = "ServerAddress"
 	BaseURL         = "BaseURL"
 	FileStoragePath = "FileStoragePath"
+	DatabaseDSN     = "DatabaseDSN"
 	LENHASH         = 16
 )
 
@@ -44,6 +46,7 @@ func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", "", "")
 	bFlag := flag.String("b", "", "")
 	fFlag := flag.String("f", "", "")
+	dFlag := flag.String("d", "", "")
 	flag.Parse()
 
 	if *aFlag != "" {
@@ -55,6 +58,9 @@ func (c *myConfig) initFlags() {
 	if *fFlag != "" {
 		c.FileStoragePath = *fFlag
 	}
+	if *dFlag != "" {
+		c.DatabaseDSN = *dFlag
+	}
 }
 
 func (c *myConfig) GetCfgValue(env string) (string, error) {
@@ -65,6 +71,8 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 		return c.BaseURL, nil
 	case FileStoragePath:
 		return c.FileStoragePath, nil
+	case DatabaseDSN:
+		return c.DatabaseDSN, nil
 	}
 
 	return "", errUnknownEnvOrFlag

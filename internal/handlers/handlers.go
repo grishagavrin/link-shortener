@@ -15,6 +15,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
+	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"go.uber.org/zap"
 )
 
@@ -133,6 +134,18 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)
 	res.Write(js)
+}
+
+func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
+	conn, err := db.Instance()
+	if err == nil {
+		if err := conn.Ping(req.Context()); err == nil {
+			res.WriteHeader(http.StatusOK)
+		}
+	} else {
+		logger.Info("not connect to db", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
