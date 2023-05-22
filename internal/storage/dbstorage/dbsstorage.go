@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 )
 
 // PostgreSQLStorage storage
@@ -26,7 +28,8 @@ func New() (*PostgreSQLStorage, error) {
 		id serial,
 		user_id varchar(50),
 		origin  varchar(255) not null,
-		short   varchar(50)  not null
+		short   varchar(50)  not null,
+		correlation_id varchar(100)
 	);`
 
 	if err := db.Insert(context.Background(), sql); err != nil {
@@ -108,4 +111,70 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	}
 
 	return key, nil
+}
+
+// Save url in storage of short links
+func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+	type temp struct {
+		ID,
+		Origin,
+		Short string
+	}
+
+	var buffer []temp
+	for _, v := range urls {
+		key, _ := utils.RandStringBytes()
+
+		var t = temp{
+			ID:     v.ID,
+			Origin: v.Origin,
+			Short:  string(key),
+		}
+		buffer = append(buffer, t)
+	}
+
+	dbi, _ := db.Instance()
+	var shorts []storage.BatchShortURLs
+	// Delete old records for tests
+	_, _ = dbi.Exec(ctx, "truncate table public.short_links;")
+
+	// sqlBunchNewRecord for new record in db
+	query := `
+		INSERT INTO public.short_links (user_id, origin, short, correlation_id) 
+		VALUES (@user_id, @origin, @short, @correlation_id);`
+
+	// Start transaction
+	tx, err := dbi.Begin(ctx)
+	if err != nil {
+		return shorts, err
+	}
+	defer tx.Rollback(ctx)
+
+	for _, v := range buffer {
+		// Add record to transaction
+		args := pgx.NamedArgs{
+			"user_id":        "all",
+			"origin":         v.Origin,
+			"short":          v.Short,
+			"correlation_id": v.ID,
+		}
+		if _, err = tx.Exec(ctx, query, args); err == nil {
+			shorts = append(shorts, storage.BatchShortURLs{
+				Short: v.Short,
+				ID:    v.ID,
+			})
+		} else {
+			logger.Info("Save bunch error", zap.Error(err))
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return shorts, nil
 }

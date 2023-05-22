@@ -100,3 +100,9 @@ func (r *RAMStorage) Load() error {
 	}
 	return nil
 }
+
+// Batch save
+func (r *RAMStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
+	var shorts []storage.BatchShortURLs
+	return shorts, nil
+}

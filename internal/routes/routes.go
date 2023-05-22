@@ -22,5 +22,6 @@ func ServiceRouter() chi.Router {
 	r.Post("/api/shorten", h.SaveJSON)
 	r.Get("/api/user/urls", h.GetLinks)
 	r.Get("/ping", h.GetPing)
+	r.Post("/api/shorten/batch", h.SaveBatch)
 	return r
 }
