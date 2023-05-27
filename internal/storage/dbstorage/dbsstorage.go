@@ -115,14 +115,12 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	dbi, _ := db.Instance()
 	pgErr := &pgconn.PgError{}
 
-	if err == nil {
-		if _, err := dbi.Exec(ctx, queryInsert, args); err != nil {
-			if errors.As(err, &pgErr) {
-				if pgErr.Code == pgerrcode.UniqueViolation {
-					var short storage.URLKey
-					_ = dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
-					return short, ErrAlreadyHasShort
-				}
+	if _, err := dbi.Exec(ctx, queryInsert, args); err != nil {
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				var short storage.URLKey
+				_ = dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
+				return short, ErrAlreadyHasShort
 			}
 		}
 		return key, nil
