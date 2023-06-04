@@ -163,7 +163,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	dbi, _ := db.Instance()
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	// _, _ = dbi.Exec(ctx, "truncate table public.short_links;")
+	_, _ = dbi.Exec(ctx, "truncate table public.short_links;")
 
 	// sqlBunchNewRecord for new record in db
 	query := `
