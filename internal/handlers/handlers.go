@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -66,6 +68,10 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 		return
 	} else {
+		if errors.Is(err, dbstorage.ErrURLIsGone) {
+			http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
+			return
+		}
 		logger.Info("Get error", zap.Error(err))
 	}
 	http.Error(res, err.Error(), http.StatusBadRequest)
@@ -90,7 +96,6 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		setBadResponse(res, errInternalSrv)
 		return
 	}
-	fmt.Println(shorts)
 
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
@@ -178,9 +183,6 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
-	// if err != nil {
-	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
-	// 	return
 	// }
 
 	resBody := struct {
@@ -250,7 +252,142 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
+	const workersCount = 10
+	body, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		setBadResponse(res, errInternalSrv)
+		return
+	}
+
+	var correlationIDs []string
+	err = json.Unmarshal(body, &correlationIDs)
+	if err != nil {
+		setBadResponse(res, errCorrectURL)
+		return
+	}
+	// Validate count
+	if len(correlationIDs) == 0 {
+		setBadResponse(res, errCorrectURL)
+		return
+	}
+
+	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	userID := "default"
+	if userIDCtx != nil {
+		// Convert interface type to user.UniqUser
+		userID = userIDCtx.(string)
+	}
+	inputCh := make(chan string)
+	go func() {
+		for _, id := range correlationIDs {
+			inputCh <- id
+		}
+		close(inputCh)
+	}()
+
+	// здесь fanOut
+	fanOutChs := fanOut(inputCh, workersCount)
+	// fanOutChs range all slices
+	errCh := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
+
+	for _, fanOutCh := range fanOutChs {
+		// To bunch saving
+		fanInSave(ctx, fanOutCh, errCh, wg, userID)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	if err := <-errCh; err != nil {
+		fmt.Println("Handler error")
+		setBadResponse(res, errInternalSrv)
+		cancel()
+		return
+	}
+
+	res.WriteHeader(http.StatusAccepted)
+	cancel()
+}
+
 // setBadRequest set bad response
 func setBadResponse(w http.ResponseWriter, e error) {
 	http.Error(w, e.Error(), http.StatusBadRequest)
+}
+
+func fanInSave(ctx context.Context, input <-chan string, errCh chan<- error, wg *sync.WaitGroup, userID string) {
+	wg.Add(1)
+	go func() {
+		var IDs []string
+		var defErr error
+
+		defer func() {
+			if defErr != nil {
+				select {
+				case errCh <- defErr:
+				case <-ctx.Done():
+					fmt.Println("Aborting")
+				}
+			}
+			wg.Done()
+		}()
+
+		for ID := range input {
+			IDs = append(IDs, ID)
+		}
+		err := dbstorage.BunchUpdateAsDeleted(ctx, IDs, userID)
+
+		if err != nil {
+			defErr = err
+			return
+		}
+	}()
+}
+
+func fanOut(inputCh chan string, n int) []chan string {
+	chs := make([]chan string, 0, n)
+	for i := 0; i < n; i++ {
+		ch := make(chan string)
+		chs = append(chs, ch)
+	}
+
+	go func() {
+		defer func(chs []chan string) {
+			for _, ch := range chs {
+				close(ch)
+			}
+		}(chs)
+
+		for i := 0; ; i++ {
+			if i == len(chs) {
+				i = 0
+			}
+
+			url, ok := <-inputCh
+			if !ok {
+				return
+			}
+
+			ch := chs[i]
+			ch <- url
+		}
+	}()
+
+	return chs
+}
+
+func newWorker(input, out chan string) {
+	go func() {
+		for num := range input {
+			// out <- num / 2
+			out <- num
+		}
+
+		close(out)
+	}()
 }

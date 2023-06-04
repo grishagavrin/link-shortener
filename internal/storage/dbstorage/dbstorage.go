@@ -3,6 +3,7 @@ package dbstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/logger"
@@ -22,6 +23,7 @@ type PostgreSQLStorage struct{}
 // ErrURLNotFound error by package level
 var ErrURLNotFound = errors.New("url not found")
 var ErrAlreadyHasShort = errors.New("already has short")
+var ErrURLIsGone = errors.New("url is gone")
 
 func New() (*PostgreSQLStorage, error) {
 	// Check if scheme exist
@@ -31,7 +33,8 @@ func New() (*PostgreSQLStorage, error) {
 		user_id varchar(50),
 		origin  varchar(255) not null,
 		short   varchar(50)  not null,
-		correlation_id varchar(100)	
+		correlation_id varchar(100),
+		is_deleted boolean default false
 	);
 	CREATE UNIQUE INDEX IF NOT EXISTS short_links_user_id_origin_uindex
     on public.short_links (user_id, origin);
@@ -46,16 +49,20 @@ func New() (*PostgreSQLStorage, error) {
 
 func (s *PostgreSQLStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
 	defer cancel()
 
-	query := "select origin from public.short_links where short=$1"
+	query := "select origin, is_deleted from public.short_links where short=$1"
 	dbi, _ := db.Instance()
 
 	var origin storage.ShortURL
-	err := dbi.QueryRow(ctx, query, key).Scan(&origin)
+	var gone bool
+	err := dbi.QueryRow(ctx, query, key).Scan(&origin, &gone)
 	if err != nil {
 		return "", ErrURLNotFound
+	}
+
+	if gone {
+		return "", ErrURLIsGone
 	}
 
 	return origin, nil
@@ -156,7 +163,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	dbi, _ := db.Instance()
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	_, _ = dbi.Exec(ctx, "truncate table public.short_links;")
+	// _, _ = dbi.Exec(ctx, "truncate table public.short_links;")
 
 	// sqlBunchNewRecord for new record in db
 	query := `
@@ -196,4 +203,39 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	}
 
 	return shorts, nil
+}
+
+func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
+	dbi, _ := db.Instance()
+	if len(correlationIds) == 0 {
+		return nil
+	}
+	// Start transaction
+	tx, err := dbi.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Rollback handler
+	defer tx.Rollback(ctx)
+
+	// Prepare statement
+	query := `
+	UPDATE public.short_links 
+	SET is_deleted=true 
+	WHERE user_id=$1
+	AND (correlation_id = ANY($2) OR short=ANY($3))
+	`
+	// Update in transaction
+	if _, err = tx.Exec(ctx, query, userID, correlationIds, correlationIds); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	// Save changes
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
