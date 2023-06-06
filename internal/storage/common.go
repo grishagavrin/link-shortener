@@ -17,7 +17,7 @@ type BatchShortURLs struct {
 }
 
 type Repository interface {
-	GetLinkDB(user.UniqUser, URLKey) (ShortURL, error)
+	GetLinkDB(URLKey) (ShortURL, error)
 	SaveLinkDB(user.UniqUser, ShortURL) (URLKey, error)
 	SaveBatch(urls []BatchURL) ([]BatchShortURLs, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)

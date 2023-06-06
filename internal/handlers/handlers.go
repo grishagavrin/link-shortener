@@ -63,18 +63,22 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
-	if err == nil {
-		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
-		return
-	} else {
+	logger.Info("Get ID:", zap.String("id", q))
+	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
+
+	if err != nil {
 		if errors.Is(err, dbstorage.ErrURLIsGone) {
+			logger.Info("Get error is gone", zap.Error(err))
 			http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
 			return
 		}
-		logger.Info("Get error", zap.Error(err))
+		logger.Info("Get error is bad request", zap.Error(err))
+		http.Error(res, errBadRequest.Error(), http.StatusBadRequest)
+		return
 	}
-	http.Error(res, err.Error(), http.StatusBadRequest)
+
+	logger.Info("redirect")
+	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
