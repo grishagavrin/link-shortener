@@ -6,21 +6,22 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/logger"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrDatabaseNotAvaliable = errors.New("db not avaliable")
 
-var instance *pgx.Conn
+var instance *pgxpool.Pool
 
-func Instance() (*pgx.Conn, error) {
+func Instance() (*pgxpool.Pool, error) {
 	if instance == nil {
 		dsn, _ := config.Instance().GetCfgValue(config.DatabaseDSN)
 		if dsn == "" {
 			return instance, ErrDatabaseNotAvaliable
 		}
 
-		inst, err := pgx.Connect(context.Background(), dsn)
+		// inst, err := pgx.Connect(context.Background(), dsn)
+		inst, err := pgxpool.New(context.Background(), dsn)
 		if err != nil {
 			return instance, err
 		}

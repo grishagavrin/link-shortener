@@ -24,5 +24,6 @@ func ServiceRouter() chi.Router {
 	r.Get("/ping", h.GetPing)
 	r.Post("/api/shorten/batch", h.SaveBatch)
 	r.Delete("/api/user/urls", h.DeleteBatch)
+
 	return r
 }

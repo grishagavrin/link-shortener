@@ -253,7 +253,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
-	const workersCount = 10
+	const workersCount = 3
 	body, err := io.ReadAll(req.Body)
 
 	if err != nil {
@@ -287,32 +287,62 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		close(inputCh)
 	}()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// здесь fanOut
 	fanOutChs := fanOut(inputCh, workersCount)
-	// fanOutChs range all slices
-	errCh := make(chan error)
-	ctx, cancel := context.WithCancel(context.Background())
-	wg := &sync.WaitGroup{}
+	workerChs := make([]chan string, 0, workersCount)
 
 	for _, fanOutCh := range fanOutChs {
-		// To bunch saving
-		fanInSave(ctx, fanOutCh, errCh, wg, userID)
+		workerCh := make(chan string)
+		newWorker(ctx, userID, fanOutCh, workerCh)
+		workerChs = append(workerChs, workerCh)
 	}
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-
-	if err := <-errCh; err != nil {
-		fmt.Println("Handler error")
-		setBadResponse(res, errInternalSrv)
-		cancel()
-		return
+	// здесь fanIn
+	for v := range fanIn(workerChs...) {
+		fmt.Println(v)
 	}
 
 	res.WriteHeader(http.StatusAccepted)
-	cancel()
+}
+
+func fanIn(inputChs ...chan string) chan string {
+	outCh := make(chan string)
+
+	go func() {
+		wg := &sync.WaitGroup{}
+
+		for _, inputCh := range inputChs {
+			wg.Add(1)
+
+			go func(inputCh chan string) {
+				defer wg.Done()
+				for item := range inputCh {
+					outCh <- item
+				}
+			}(inputCh)
+		}
+
+		wg.Wait()
+		close(outCh)
+	}()
+
+	return outCh
+}
+
+func newWorker(ctx context.Context, userID string, input, out chan string) {
+	go func() {
+		for ID := range input {
+			updated, err := dbstorage.BunchUpdateAsDeleted(ctx, ID, userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+			out <- updated
+		}
+		close(out)
+	}()
 }
 
 // setBadRequest set bad response
@@ -320,34 +350,34 @@ func setBadResponse(w http.ResponseWriter, e error) {
 	http.Error(w, e.Error(), http.StatusBadRequest)
 }
 
-func fanInSave(ctx context.Context, input <-chan string, errCh chan<- error, wg *sync.WaitGroup, userID string) {
-	wg.Add(1)
-	go func() {
-		var IDs []string
-		var defErr error
+// func fanInSave(ctx context.Context, input <-chan string, errCh chan<- error, wg *sync.WaitGroup, userID string) {
+// 	wg.Add(1)
+// 	go func() {
+// 		var IDs []string
+// 		var defErr error
 
-		defer func() {
-			if defErr != nil {
-				select {
-				case errCh <- defErr:
-				case <-ctx.Done():
-					fmt.Println("Aborting")
-				}
-			}
-			wg.Done()
-		}()
+// 		defer func() {
+// 			if defErr != nil {
+// 				select {
+// 				case errCh <- defErr:
+// 				case <-ctx.Done():
+// 					fmt.Println("Aborting")
+// 				}
+// 			}
+// 			wg.Done()
+// 		}()
 
-		for ID := range input {
-			IDs = append(IDs, ID)
-		}
-		err := dbstorage.BunchUpdateAsDeleted(ctx, IDs, userID)
+// 		for ID := range input {
+// 			IDs = append(IDs, ID)
+// 		}
+// 		err := dbstorage.BunchUpdateAsDeleted(ctx, IDs, userID)
 
-		if err != nil {
-			defErr = err
-			return
-		}
-	}()
-}
+// 		if err != nil {
+// 			defErr = err
+// 			return
+// 		}
+// 	}()
+// }
 
 func fanOut(inputCh chan string, n int) []chan string {
 	chs := make([]chan string, 0, n)
@@ -379,15 +409,4 @@ func fanOut(inputCh chan string, n int) []chan string {
 	}()
 
 	return chs
-}
-
-func newWorker(input, out chan string) {
-	go func() {
-		for num := range input {
-			// out <- num / 2
-			out <- num
-		}
-
-		close(out)
-	}()
 }

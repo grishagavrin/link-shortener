@@ -72,7 +72,7 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
-	query := "select origin, short from public.short_links where user_id=$1"
+	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
 	dbi, _ := db.Instance()
 
 	origins := storage.ShortLinks{}
@@ -187,6 +187,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 			"short":          v.Short,
 			"correlation_id": v.ID,
 		}
+
 		if _, err = tx.Exec(ctx, query, args); err == nil {
 			shorts = append(shorts, storage.BatchShortURLs{
 				Short: v.Short,
@@ -205,37 +206,35 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	return shorts, nil
 }
 
-func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
+func BunchUpdateAsDeleted(ctx context.Context, correlationIds string, userID string) (string, error) {
 	dbi, _ := db.Instance()
 	if len(correlationIds) == 0 {
-		return nil
+		return "correlationIds is null", nil
 	}
-	// Start transaction
+
 	tx, err := dbi.Begin(ctx)
 	if err != nil {
-		return err
+		fmt.Println("ERROR: ", err)
+		return "ERROR: tx begin error", err
 	}
-
-	// Rollback handler
 	defer tx.Rollback(ctx)
 
-	// Prepare statement
 	query := `
 	UPDATE public.short_links 
 	SET is_deleted=true 
 	WHERE user_id=$1
-	AND (correlation_id = ANY($2) OR short=ANY($3))
+	AND (correlation_id =($2) OR short=($3))
 	`
-	// Update in transaction
+
 	if _, err = tx.Exec(ctx, query, userID, correlationIds, correlationIds); err != nil {
 		fmt.Println(err)
-		return err
+		return "tx exec error", err
 	}
 
-	// Save changes
 	err = tx.Commit(ctx)
 	if err != nil {
-		return err
+		return "tx commit error", err
 	}
-	return nil
+
+	return "updated", nil
 }
