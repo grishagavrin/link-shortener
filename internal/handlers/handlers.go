@@ -287,6 +287,8 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		close(inputCh)
 	}()
 
+	res.WriteHeader(http.StatusAccepted)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -305,7 +307,6 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		fmt.Println(v)
 	}
 
-	res.WriteHeader(http.StatusAccepted)
 }
 
 func fanIn(inputChs ...chan string) chan string {
