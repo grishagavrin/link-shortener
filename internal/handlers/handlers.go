@@ -280,9 +280,9 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
 	userID := "default"
 	if userIDCtx != nil {
-		// Convert interface type to user.UniqUser
 		userID = userIDCtx.(string)
 	}
+
 	inputCh := make(chan string)
 	go func() {
 		for _, id := range correlationIDs {
@@ -354,35 +354,6 @@ func newWorker(ctx context.Context, userID string, input, out chan string) {
 func setBadResponse(w http.ResponseWriter, e error) {
 	http.Error(w, e.Error(), http.StatusBadRequest)
 }
-
-// func fanInSave(ctx context.Context, input <-chan string, errCh chan<- error, wg *sync.WaitGroup, userID string) {
-// 	wg.Add(1)
-// 	go func() {
-// 		var IDs []string
-// 		var defErr error
-
-// 		defer func() {
-// 			if defErr != nil {
-// 				select {
-// 				case errCh <- defErr:
-// 				case <-ctx.Done():
-// 					fmt.Println("Aborting")
-// 				}
-// 			}
-// 			wg.Done()
-// 		}()
-
-// 		for ID := range input {
-// 			IDs = append(IDs, ID)
-// 		}
-// 		err := dbstorage.BunchUpdateAsDeleted(ctx, IDs, userID)
-
-// 		if err != nil {
-// 			defErr = err
-// 			return
-// 		}
-// 	}()
-// }
 
 func fanOut(inputCh chan string, n int) []chan string {
 	chs := make([]chan string, 0, n)

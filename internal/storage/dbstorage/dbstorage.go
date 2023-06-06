@@ -223,6 +223,7 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds string, userID str
 	SET is_deleted=true 
 	WHERE user_id=$1
 	AND (correlation_id =($2) OR short=($3))
+	RETURNING short
 	`
 
 	if _, err = tx.Exec(ctx, query, userID, correlationIds, correlationIds); err != nil {
@@ -235,5 +236,5 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds string, userID str
 		return "tx commit error", err
 	}
 
-	return "updated", nil
+	return correlationIds, nil
 }
