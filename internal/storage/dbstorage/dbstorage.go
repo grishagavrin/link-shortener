@@ -48,15 +48,15 @@ func New() (*PostgreSQLStorage, error) {
 }
 
 func (s *PostgreSQLStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
 
 	dbi, _ := db.Instance()
 	var origin storage.ShortURL
 	var gone bool
 	query := "select origin, is_deleted from public.short_links where short=$1"
 
-	err := dbi.QueryRow(ctx, query, string(key)).Scan(&origin, &gone)
+	err := dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
 
 	if err != nil {
 		return "", ErrURLNotFound
