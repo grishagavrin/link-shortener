@@ -63,7 +63,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
+	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
 	if err == nil {
 		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 		return
@@ -287,10 +287,8 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		close(inputCh)
 	}()
 
-	res.WriteHeader(http.StatusAccepted)
-
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cancel()
 
 	// здесь fanOut
 	fanOutChs := fanOut(inputCh, workersCount)
@@ -304,9 +302,11 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 
 	// здесь fanIn
 	for v := range fanIn(workerChs...) {
-		fmt.Println(v)
+		fmt.Println("V:", v)
 	}
 
+	res.WriteHeader(http.StatusAccepted)
+	cancel()
 }
 
 func fanIn(inputChs ...chan string) chan string {

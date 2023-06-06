@@ -72,10 +72,10 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 	return key, nil
 }
 
-func (r *RAMStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
+func (r *RAMStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	shorts, ok := r.DB[userID]
+	shorts, ok := r.DB["all"]
 	if !ok {
 		return "", errNotFoundURL
 	}

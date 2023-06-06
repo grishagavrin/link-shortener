@@ -47,7 +47,7 @@ func New() (*PostgreSQLStorage, error) {
 	return &PostgreSQLStorage{}, nil
 }
 
-func (s *PostgreSQLStorage) GetLinkDB(userID user.UniqUser, key storage.URLKey) (storage.ShortURL, error) {
+func (s *PostgreSQLStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
 	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	// defer cancel()
 
