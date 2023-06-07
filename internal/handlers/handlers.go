@@ -69,7 +69,9 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		if errors.Is(err, dbstorage.ErrURLIsGone) {
 			logger.Info("Get error is gone", zap.Error(err))
-			http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
+			// http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
+			res.WriteHeader(http.StatusGone)
+			// res.Write([]byte(dbstorage.ErrURLIsGone.Error()))
 			return
 		}
 
