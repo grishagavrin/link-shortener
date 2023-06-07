@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -35,12 +34,6 @@ func main() {
 		Handler: routes.ServiceRouter(),
 	}
 
-	// l.Info("Start server address: " + srvAddr)
-	// err = srv.ListenAndServe()
-	// if err != nil {
-	// 	log.Fatalf("Could not start server: %v", err)
-	// }
-
 	go func() {
 		l.Fatal("app error exit", zap.Error(srv.ListenAndServe()))
 	}()
@@ -59,10 +52,8 @@ func main() {
 	conn, err := db.Instance()
 	if err == nil {
 		l.Info("Closing connect to db")
-		err := conn.Close(context.Background())
-		if err != nil {
-			l.Info("Closing don't close")
-		}
+		conn.Close()
 	}
+
 	l.Info("Closing connect to db success")
 }

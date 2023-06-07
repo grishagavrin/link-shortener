@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -61,14 +63,23 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
-	if err == nil {
-		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
+	logger.Info("Get ID:", zap.String("id", q))
+	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
+
+	if err != nil {
+		if errors.Is(err, dbstorage.ErrURLIsGone) {
+			logger.Info("Get error is gone", zap.Error(err))
+			http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
+			return
+		}
+
+		logger.Info("Get error is bad request", zap.Error(err))
+		http.Error(res, errBadRequest.Error(), http.StatusBadRequest)
 		return
-	} else {
-		logger.Info("Get error", zap.Error(err))
 	}
-	http.Error(res, err.Error(), http.StatusBadRequest)
+
+	logger.Info("redirect")
+	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
@@ -90,7 +101,6 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		setBadResponse(res, errInternalSrv)
 		return
 	}
-	fmt.Println(shorts)
 
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
@@ -178,9 +188,6 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
-	// if err != nil {
-	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
-	// 	return
 	// }
 
 	resBody := struct {
@@ -248,6 +255,85 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+}
+
+func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		setBadResponse(res, errInternalSrv)
+		return
+	}
+
+	var correlationIDs []string
+	err = json.Unmarshal(body, &correlationIDs)
+	if err != nil {
+		setBadResponse(res, errCorrectURL)
+		return
+	}
+
+	// Validate count
+	if len(correlationIDs) == 0 {
+		setBadResponse(res, errCorrectURL)
+		return
+	}
+
+	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	userID := "default"
+	if userIDCtx != nil {
+		userID = userIDCtx.(string)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	inputCh := make(chan string)
+	go func() {
+		for _, id := range correlationIDs {
+			inputCh <- id
+		}
+		close(inputCh)
+	}()
+
+	out := fanIn(ctx, userID, inputCh)
+
+	for value := range out {
+		fmt.Println("Value updated:", value)
+	}
+
+	res.WriteHeader(http.StatusAccepted)
+}
+
+func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan string {
+	var wg sync.WaitGroup
+	out := make(chan string)
+
+	wg.Add(len(inputs))
+
+	for _, in := range inputs {
+		go func(ch <-chan string) {
+			for {
+				value, ok := <-ch
+
+				if !ok {
+					wg.Done()
+					break
+				}
+				updated, err := dbstorage.BunchUpdateAsDeleted(ctx, value, userID)
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				out <- updated
+			}
+		}(in)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }
 
 // setBadRequest set bad response
