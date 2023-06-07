@@ -259,7 +259,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	// go sum(s[:len(s)/2], ch)
 	// go sum(s[len(s)/2:], ch)
-	const workersCount = 3
+	// const workersCount = 3
 	body, err := io.ReadAll(req.Body)
 
 	if err != nil {
