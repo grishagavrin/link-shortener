@@ -18,7 +18,8 @@ import (
 )
 
 // PostgreSQLStorage storage
-type PostgreSQLStorage struct{}
+type PostgreSQLStorage struct {
+}
 
 // ErrURLNotFound error by package level
 var ErrURLNotFound = errors.New("url not found")
@@ -52,8 +53,7 @@ func (s *PostgreSQLStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, err
 	var origin storage.ShortURL
 	var gone bool
 
-	query := "select origin, is_deleted from public.short_links where short=$1"
-
+	query := "SELECT origin, is_deleted FROM public.short_links WHERE short=$1"
 	err := dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
 
 	if err != nil {

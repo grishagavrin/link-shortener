@@ -257,6 +257,8 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
+	// go sum(s[:len(s)/2], ch)
+	// go sum(s[len(s)/2:], ch)
 	const workersCount = 3
 	body, err := io.ReadAll(req.Body)
 
@@ -271,6 +273,7 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		setBadResponse(res, errCorrectURL)
 		return
 	}
+
 	// Validate count
 	if len(correlationIDs) == 0 {
 		setBadResponse(res, errCorrectURL)
@@ -283,6 +286,9 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		userID = userIDCtx.(string)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	inputCh := make(chan string)
 	go func() {
 		for _, id := range correlationIDs {
@@ -291,98 +297,131 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		close(inputCh)
 	}()
 
+	out := fanIn1(ctx, userID, inputCh)
+
+	for value := range out {
+		fmt.Println("Value updated:", value)
+	}
+
+	// // здесь fanOut
+	// fanOutChs := fanOut(inputCh, workersCount)
+	// workerChs := make([]chan string, 0, workersCount)
+
+	// for _, fanOutCh := range fanOutChs {
+	// 	workerCh := make(chan string)
+	// 	newWorker(ctx, userID, fanOutCh, workerCh)
+	// 	workerChs = append(workerChs, workerCh)
+	// }
+
+	// for v := range fanIn(workerChs...) {
+	// 	fmt.Println(v)
+	// }
+
 	res.WriteHeader(http.StatusAccepted)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// здесь fanOut
-	fanOutChs := fanOut(inputCh, workersCount)
-	workerChs := make([]chan string, 0, workersCount)
-
-	for _, fanOutCh := range fanOutChs {
-		workerCh := make(chan string)
-		newWorker(ctx, userID, fanOutCh, workerCh)
-		workerChs = append(workerChs, workerCh)
-	}
-
-	// здесь fanIn
-	for v := range fanIn(workerChs...) {
-		fmt.Println(v)
-	}
-
 }
 
-func fanIn(inputChs ...chan string) chan string {
-	outCh := make(chan string)
+func fanIn1(ctx context.Context, userID string, inputs ...<-chan string) <-chan string {
+	var wg sync.WaitGroup
+	out := make(chan string)
 
-	go func() {
-		wg := &sync.WaitGroup{}
+	wg.Add(len(inputs))
 
-		for _, inputCh := range inputChs {
-			wg.Add(1)
+	for _, in := range inputs {
+		go func(ch <-chan string) {
+			for {
+				value, ok := <-ch
 
-			go func(inputCh chan string) {
-				defer wg.Done()
-				for item := range inputCh {
-					outCh <- item
+				if !ok {
+					wg.Done()
+					break
 				}
-			}(inputCh)
-		}
+				updated, err := dbstorage.BunchUpdateAsDeleted(ctx, value, userID)
+				if err != nil {
+					fmt.Println(err)
+				}
 
-		wg.Wait()
-		close(outCh)
-	}()
-
-	return outCh
-}
-
-func newWorker(ctx context.Context, userID string, input, out chan string) {
-	go func() {
-		for ID := range input {
-			updated, err := dbstorage.BunchUpdateAsDeleted(ctx, ID, userID)
-			if err != nil {
-				fmt.Println(err)
+				out <- updated
 			}
-			out <- updated
-		}
+		}(in)
+	}
+
+	go func() {
+		wg.Wait()
 		close(out)
 	}()
+	return out
 }
+
+// func fanIn(inputChs ...chan string) chan string {
+// 	outCh := make(chan string)
+
+// 	go func() {
+// 		wg := &sync.WaitGroup{}
+
+// 		for _, inputCh := range inputChs {
+// 			wg.Add(1)
+
+// 			go func(inputCh chan string) {
+// 				defer wg.Done()
+// 				for item := range inputCh {
+// 					outCh <- item
+// 				}
+// 			}(inputCh)
+// 		}
+
+// 		wg.Wait()
+// 		close(outCh)
+// 	}()
+
+// 	return outCh
+// }
+
+// func newWorker(ctx context.Context, userID string, input, out chan string) {
+// 	go func() {
+// 		for ID := range input {
+// 			updated, err := dbstorage.BunchUpdateAsDeleted(ctx, ID, userID)
+// 			if err != nil {
+// 				fmt.Println(err)
+// 			}
+// 			out <- updated
+// 		}
+// 		close(out)
+// 	}()
+// }
 
 // setBadRequest set bad response
 func setBadResponse(w http.ResponseWriter, e error) {
 	http.Error(w, e.Error(), http.StatusBadRequest)
 }
 
-func fanOut(inputCh chan string, n int) []chan string {
-	chs := make([]chan string, 0, n)
-	for i := 0; i < n; i++ {
-		ch := make(chan string)
-		chs = append(chs, ch)
-	}
+// func fanOut(inputCh chan string, n int) []chan string {
+// 	chs := make([]chan string, 0, n)
+// 	for i := 0; i < n; i++ {
+// 		ch := make(chan string)
+// 		chs = append(chs, ch)
+// 	}
 
-	go func() {
-		defer func(chs []chan string) {
-			for _, ch := range chs {
-				close(ch)
-			}
-		}(chs)
+// 	go func() {
+// 		defer func(chs []chan string) {
+// 			for _, ch := range chs {
+// 				close(ch)
+// 			}
+// 		}(chs)
 
-		for i := 0; ; i++ {
-			if i == len(chs) {
-				i = 0
-			}
+// 		for i := 0; ; i++ {
+// 			if i == len(chs) {
+// 				i = 0
+// 			}
 
-			url, ok := <-inputCh
-			if !ok {
-				return
-			}
+// 			url, ok := <-inputCh
+// 			if !ok {
+// 				return
+// 			}
 
-			ch := chs[i]
-			ch <- url
-		}
-	}()
+// 			ch := chs[i]
+// 			ch <- url
+// 		}
+// 	}()
 
-	return chs
-}
+// 	return chs
+// }
