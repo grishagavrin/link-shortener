@@ -25,10 +25,10 @@ func Instance() (*pgxpool.Pool, error) {
 		if err != nil {
 			return instance, err
 		}
+
 		instance = inst
 		logger.Info("Connecting to DB")
 	}
-
 	return instance, nil
 }
 
