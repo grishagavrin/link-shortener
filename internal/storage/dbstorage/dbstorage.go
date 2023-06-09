@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/logger"
@@ -213,31 +214,32 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID s
 		return fmt.Errorf("correlationIds is null")
 	}
 
-	tx, err := dbi.Begin(ctx)
-	if err != nil {
-		fmt.Println("ERROR: ", err)
-		return fmt.Errorf("correlationIds is null")
-	}
-	defer tx.Rollback(ctx)
-
 	query := `
 	UPDATE public.short_links 
 	SET is_deleted=true 
-	WHERE user_id=$1
-	AND (correlation_id=ANY($2) OR short=ANY($3));
+	WHERE user_id=$1 AND short=$2;
 	`
+	batch := &pgx.Batch{}
 
-	if _, err = tx.Exec(ctx, query, userID, correlationIds, correlationIds); err != nil {
-		fmt.Println(err)
-		return fmt.Errorf("tx exec error")
+	for _, id := range correlationIds {
+		batch.Queue(query, userID, id)
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		fmt.Println(err)
-		return fmt.Errorf("tx commit error")
-		// return "tx commit error", err
+	results := dbi.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for _, id := range correlationIds {
+		_, err := results.Exec()
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				log.Printf("update error on %s", id)
+				continue
+			}
+
+			return fmt.Errorf("unable to insert row: %w", err)
+		}
 	}
 
-	return nil
+	return results.Close()
 }
