@@ -299,8 +299,15 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 
 	out := fanIn(ctx, userID, inputCh)
 
+	var idS []string
 	for value := range out {
-		fmt.Println("Value updated:", value)
+		// fmt.Println("Value updated:", value)
+		// ids = ()
+		idS = append(idS, value)
+	}
+	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, userID)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	res.WriteHeader(http.StatusAccepted)
@@ -321,12 +328,12 @@ func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan s
 					wg.Done()
 					break
 				}
-				updated, err := dbstorage.BunchUpdateAsDeleted(ctx, value, userID)
-				if err != nil {
-					fmt.Println(err)
-				}
+				// updated, err := dbstorage.BunchUpdateAsDeleted(ctx, value, userID)
+				// if err != nil {
+				// 	fmt.Println(err)
+				// }
 
-				out <- updated
+				out <- value
 			}
 		}(in)
 	}

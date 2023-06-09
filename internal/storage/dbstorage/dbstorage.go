@@ -37,6 +37,7 @@ func New() (*PostgreSQLStorage, error) {
 		correlation_id varchar(100),
 		is_deleted boolean default false
 	);
+
 	CREATE UNIQUE INDEX IF NOT EXISTS short_links_user_id_origin_uindex
     on public.short_links (user_id, origin);
 	`
@@ -176,6 +177,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	if err != nil {
 		return shorts, err
 	}
+
 	defer tx.Rollback(ctx)
 
 	for _, v := range buffer {
@@ -205,16 +207,16 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	return shorts, nil
 }
 
-func BunchUpdateAsDeleted(ctx context.Context, correlationIds string, userID string) (string, error) {
+func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
 	dbi, _ := db.Instance()
 	if len(correlationIds) == 0 {
-		return "correlationIds is null", nil
+		return fmt.Errorf("correlationIds is null")
 	}
 
 	tx, err := dbi.Begin(ctx)
 	if err != nil {
 		fmt.Println("ERROR: ", err)
-		return "ERROR: tx begin error", err
+		return fmt.Errorf("correlationIds is null")
 	}
 	defer tx.Rollback(ctx)
 
@@ -222,19 +224,20 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds string, userID str
 	UPDATE public.short_links 
 	SET is_deleted=true 
 	WHERE user_id=$1
-	AND (correlation_id =($2) OR short=($3))
-	RETURNING short
+	AND (correlation_id=ANY($2) OR short=ANY($3));
 	`
 
 	if _, err = tx.Exec(ctx, query, userID, correlationIds, correlationIds); err != nil {
 		fmt.Println(err)
-		return "tx exec error", err
+		return fmt.Errorf("tx exec error")
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return "tx commit error", err
+		fmt.Println(err)
+		return fmt.Errorf("tx commit error")
+		// return "tx commit error", err
 	}
 
-	return correlationIds, nil
+	return nil
 }
