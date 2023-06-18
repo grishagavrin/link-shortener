@@ -56,7 +56,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	h.l.Info("Get ID:", zap.String("id", q))
-	foundedURL, err := h.s.GetLinkDB(storage.Origin(q))
+	foundedURL, err := h.s.GetLinkDB(storage.ShortURL(q))
 
 	if err != nil {
 		if errors.Is(err, errs.ErrURLIsGone) {
@@ -138,7 +138,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
+	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.Origin(body))
 	status := http.StatusCreated
 
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
@@ -171,7 +171,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
+	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.Origin(reqBody.URL))
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict

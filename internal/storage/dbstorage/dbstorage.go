@@ -52,12 +52,12 @@ func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 	}, nil
 }
 
-func (s *PostgreSQLStorage) GetLinkDB(key storage.Origin) (storage.ShortURL, error) {
-	var origin storage.ShortURL
+func (s *PostgreSQLStorage) GetLinkDB(shortKey storage.ShortURL) (storage.Origin, error) {
+	var origin storage.Origin
 	var gone bool
 
 	query := "SELECT origin, is_deleted FROM public.short_links WHERE short=$1"
-	err := s.dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
+	err := s.dbi.QueryRow(context.Background(), query, string(shortKey)).Scan(&origin, &gone)
 
 	if gone {
 		return "", errs.ErrURLIsGone
@@ -90,17 +90,17 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 		if err != nil {
 			return origins, err
 		}
-		origins[origin] = short
+		origins[short] = origin
 	}
 
 	return origins, nil
 }
 
 // Save url
-func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.Origin, error) {
+func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (storage.ShortURL, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	key, err := utils.RandStringBytes()
+	shortKey, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err
 	}
@@ -117,7 +117,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	args := pgx.NamedArgs{
 		"user_id": userID,
 		"origin":  url,
-		"short":   key,
+		"short":   shortKey,
 	}
 
 	pgErr := &pgconn.PgError{}
@@ -125,29 +125,29 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	if _, err := s.dbi.Exec(ctx, queryInsert, args); err != nil {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				var short storage.Origin
+				var short storage.ShortURL
 				_ = s.dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
 				return short, errs.ErrAlreadyHasShort
 			}
 		}
-		return key, nil
+		return shortKey, nil
 	}
 
-	return key, nil
+	return shortKey, nil
 }
 
 // Save url batch
 func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL) ([]storage.BatchResURL, error) {
-	type temp struct{ Corr_ID, Origin, Short string }
+	type temp struct{ CorrID, Origin, Short string }
 
 	var buffer []temp
 	for _, v := range urls {
 		shortKey, _ := utils.RandStringBytes()
 
 		var t = temp{
-			Corr_ID: v.Corr_ID,
-			Origin:  v.Origin,
-			Short:   string(shortKey),
+			CorrID: v.CorrID,
+			Origin: v.Origin,
+			Short:  string(shortKey),
 		}
 		buffer = append(buffer, t)
 	}
@@ -175,13 +175,13 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 			"user_id":        userID,
 			"origin":         v.Origin,
 			"short":          v.Short,
-			"correlation_id": v.Corr_ID,
+			"correlation_id": v.CorrID,
 		}
 
 		if _, err = tx.Exec(context.Background(), query, args); err == nil {
 			shorts = append(shorts, storage.BatchResURL{
-				Short:   v.Short,
-				Corr_ID: v.Corr_ID,
+				Short:  v.Short,
+				CorrID: v.CorrID,
 			})
 		} else {
 			s.l.Info("Save bunch error", zap.Error(err))

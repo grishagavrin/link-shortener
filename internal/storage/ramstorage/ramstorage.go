@@ -42,12 +42,12 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 	return shorts, nil
 }
 
-func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.Origin, error) {
+func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (storage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
 	r.l.Sugar().Infof("userID: ", string(userID))
-	key, err := utils.RandStringBytes()
+	shortKey, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err
 	}
@@ -59,25 +59,25 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 		currentURLUser = urls
 	}
 
-	currentURLUser[key] = url
+	currentURLUser[shortKey] = url
 	r.DB[userID] = currentURLUser
 
 	if urls, ok := r.DB["all"]; ok {
 		currentURLAll = urls
 	}
-	currentURLAll[key] = url
+	currentURLAll[shortKey] = url
 	r.DB["all"] = currentURLAll
 
 	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
-		return key, nil
+		return shortKey, nil
 	}
 
 	_ = filestorage.Write(fs, r.DB)
-	return key, nil
+	return shortKey, nil
 }
 
-func (r *RAMStorage) GetLinkDB(key storage.Origin) (storage.ShortURL, error) {
+func (r *RAMStorage) GetLinkDB(key storage.ShortURL) (storage.Origin, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 	shorts, ok := r.DB["all"]
