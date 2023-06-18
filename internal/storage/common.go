@@ -7,10 +7,12 @@ import (
 type ShortURL string
 type URLKey string
 type ShortLinks map[URLKey]ShortURL
+
 type BatchURL struct {
 	ID     string `json:"correlation_id"`
 	Origin string `json:"original_url"`
 }
+
 type BatchShortURLs struct {
 	Short string `json:"short_url"`
 	ID    string `json:"correlation_id"`

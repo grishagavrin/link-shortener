@@ -3,12 +3,11 @@ package filestorage
 import (
 	"bufio"
 	"encoding/gob"
-	"errors"
 	"io"
 	"os"
-)
 
-var ErrFileStorageNotClose = errors.New("file storage has not close")
+	"github.com/grishagavrin/link-shortener/internal/errs"
+)
 
 // Write data to path
 func Write(path string, data interface{}) error {
@@ -20,7 +19,7 @@ func Write(path string, data interface{}) error {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			panic(ErrFileStorageNotClose)
+			panic(errs.ErrFileStorageNotClose)
 		}
 	}(f)
 
@@ -45,7 +44,7 @@ func Read(path string, data interface{}) error {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			panic(ErrFileStorageNotClose)
+			panic(errs.ErrFileStorageNotClose)
 		}
 	}(f)
 	gd := gob.NewDecoder(f)

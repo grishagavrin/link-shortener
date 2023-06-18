@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grishagavrin/link-shortener/internal/logger"
+	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
@@ -46,4 +47,16 @@ func CooksMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserIDCtxName, userID)))
 	})
+}
+
+// GetContextUserID return uniq user id from session
+func GetContextUserID(req *http.Request) user.UniqUser {
+	userIDCtx := req.Context().Value(UserIDCtxName)
+	userID := "default"
+	if userIDCtx != nil {
+		// Convert interface type to user.UniqUser
+		userID = userIDCtx.(string)
+	}
+
+	return user.UniqUser(userID)
 }

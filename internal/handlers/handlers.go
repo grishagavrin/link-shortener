@@ -14,7 +14,6 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/dbstorage"
 	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
@@ -25,25 +24,27 @@ import (
 
 type Handler struct {
 	s storage.Repository
+	l *zap.Logger
 }
 
 func New(l *zap.Logger) (*Handler, error) {
 	_, err := db.Instance()
 	if err == nil {
-		l.Info("Set db handler")
-		s, err := dbstorage.New()
+		l.Info("Set DB handler")
+		storage, err := dbstorage.New()
 		if err != nil {
 			return nil, err
 		}
-		return &Handler{
-			s: s,
-		}, nil
+
+		return &Handler{s: storage, l: l}, nil
 	} else {
-		r, err := ramstorage.New()
+		storage, err := ramstorage.New()
 		if err != nil {
 			return nil, err
 		}
-		return &Handler{s: r}, nil
+
+		l.Info("Set RAM handler")
+		return &Handler{s: storage, l: l}, nil
 	}
 }
 
@@ -54,22 +55,22 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	logger.Info("Get ID:", zap.String("id", q))
+	h.l.Info("Get ID:", zap.String("id", q))
 	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
 
 	if err != nil {
 		if errors.Is(err, errs.ErrURLIsGone) {
-			logger.Info("Get error is gone", zap.Error(err))
+			h.l.Info("Get error is gone", zap.Error(err))
 			http.Error(res, errs.ErrURLIsGone.Error(), http.StatusGone)
 			return
 		}
 
-		logger.Info("Get error is bad request", zap.Error(err))
+		h.l.Info("Get error is bad request", zap.Error(err))
 		http.Error(res, errs.ErrBadRequest.Error(), http.StatusBadRequest)
 		return
 	}
 
-	logger.Info("redirect")
+	h.l.Info("redirect")
 	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
@@ -103,6 +104,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	for k := range shorts {
 		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
 	}
+
 	body, err = json.Marshal(shorts)
 	if err == nil {
 		// Prepare response
@@ -131,12 +133,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	userID := "default"
-	if userIDCtx != nil {
-		// Convert interface type to user.UniqUser
-		userID = userIDCtx.(string)
-	}
+	userID := middlewares.GetContextUserID(req)
 
 	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
 	status := http.StatusCreated
@@ -169,12 +166,8 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	userID := "default"
-	if userIDCtx != nil {
-		// Convert interface type to user.UniqUser
-		userID = userIDCtx.(string)
-	}
+	userID := middlewares.GetContextUserID(req)
+
 	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
@@ -205,7 +198,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusOK)
 		}
 	} else {
-		logger.Info("not connect to db", zap.Error(err))
+		h.l.Info("not connect to db", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -269,11 +262,7 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	userID := "default"
-	if userIDCtx != nil {
-		userID = userIDCtx.(string)
-	}
+	userID := middlewares.GetContextUserID(req)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -286,13 +275,13 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		close(inputCh)
 	}()
 
-	out := fanIn(ctx, userID, inputCh)
+	out := fanIn(ctx, string(userID), inputCh)
 
 	var idS []string
 	for value := range out {
 		idS = append(idS, value)
 	}
-	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, userID)
+	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, string(userID))
 	if err != nil {
 		fmt.Println(err)
 	}
