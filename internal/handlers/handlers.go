@@ -56,7 +56,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	h.l.Info("Get ID:", zap.String("id", q))
-	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
+	foundedURL, err := h.s.GetLinkDB(storage.Origin(q))
 
 	if err != nil {
 		if errors.Is(err, errs.ErrURLIsGone) {

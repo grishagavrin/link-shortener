@@ -53,7 +53,7 @@ func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 	}, nil
 }
 
-func (s *PostgreSQLStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
+func (s *PostgreSQLStorage) GetLinkDB(key storage.Origin) (storage.ShortURL, error) {
 	var origin storage.ShortURL
 	var gone bool
 
@@ -84,7 +84,7 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 	}
 
 	for rows.Next() {
-		var origin storage.URLKey
+		var origin storage.Origin
 		var short storage.ShortURL
 
 		err = rows.Scan(&short, &origin)
@@ -98,7 +98,7 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 }
 
 // Save url in storage of short links
-func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
+func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.Origin, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	key, err := utils.RandStringBytes()
@@ -126,7 +126,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	if _, err := s.dbi.Exec(ctx, queryInsert, args); err != nil {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				var short storage.URLKey
+				var short storage.Origin
 				_ = s.dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
 				return short, errs.ErrAlreadyHasShort
 			}

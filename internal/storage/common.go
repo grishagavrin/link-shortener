@@ -5,8 +5,8 @@ import (
 )
 
 type ShortURL string
-type URLKey string
-type ShortLinks map[URLKey]ShortURL
+type Origin string
+type ShortLinks map[Origin]ShortURL
 
 type BatchURL struct {
 	ID     string `json:"correlation_id"`
@@ -19,8 +19,8 @@ type BatchShortURLs struct {
 }
 
 type Repository interface {
-	GetLinkDB(URLKey) (ShortURL, error)
-	SaveLinkDB(user.UniqUser, ShortURL) (URLKey, error)
+	GetLinkDB(Origin) (ShortURL, error)
+	SaveLinkDB(user.UniqUser, ShortURL) (Origin, error)
 	SaveBatch(urls []BatchURL) ([]BatchShortURLs, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)
 }

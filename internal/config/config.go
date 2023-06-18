@@ -32,6 +32,7 @@ func Instance() *myConfig {
 		instance.initENV()
 		instance.initFlags()
 	}
+
 	return instance
 }
 

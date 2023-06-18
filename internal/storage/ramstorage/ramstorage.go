@@ -25,6 +25,7 @@ func New(l *zap.Logger) (*RAMStorage, error) {
 		DB: make(map[user.UniqUser]storage.ShortLinks),
 		l:  l,
 	}
+
 	if err := r.Load(); err != nil {
 		return r, err
 	}
@@ -40,7 +41,7 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 	return shorts, nil
 }
 
-func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
+func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.Origin, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
@@ -75,7 +76,7 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 	return key, nil
 }
 
-func (r *RAMStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
+func (r *RAMStorage) GetLinkDB(key storage.Origin) (storage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 	shorts, ok := r.DB["all"]
