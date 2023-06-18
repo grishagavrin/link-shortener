@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -202,8 +201,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	return shorts, nil
 }
 
-func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string, l *zap.Logger) error {
-	dbi, _ := db.Instance(l)
+func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
 	if len(correlationIds) == 0 {
 		return errs.ErrCorrelation
 	}
@@ -219,7 +217,7 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID s
 		batch.Queue(query, userID, id)
 	}
 
-	results := dbi.SendBatch(ctx, batch)
+	results := s.dbi.SendBatch(ctx, batch)
 	defer results.Close()
 
 	for _, id := range correlationIds {
@@ -228,7 +226,7 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID s
 			var pgErr *pgconn.PgError
 
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-				log.Printf("update error on %s", id)
+				s.l.Sugar().Infof("update error on %s", id)
 				continue
 			}
 			return fmt.Errorf("unable to insert row: %w", err)

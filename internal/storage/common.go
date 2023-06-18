@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/grishagavrin/link-shortener/internal/user"
 )
 
@@ -23,4 +25,5 @@ type Repository interface {
 	SaveLinkDB(user.UniqUser, ShortURL) (Origin, error)
 	SaveBatch(urls []BatchURL) ([]BatchShortURLs, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)
+	BunchUpdateAsDeleted(context.Context, []string, string) error
 }

@@ -1,6 +1,7 @@
 package ramstorage
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -111,4 +112,8 @@ func (r *RAMStorage) Load() error {
 func (r *RAMStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
 	var shorts []storage.BatchShortURLs
 	return shorts, nil
+}
+
+func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
+	return nil
 }

@@ -281,7 +281,7 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	for value := range out {
 		idS = append(idS, value)
 	}
-	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, string(userID), h.l)
+	err = h.s.BunchUpdateAsDeleted(ctx, idS, string(userID))
 	if err != nil {
 		fmt.Println(err)
 	}
