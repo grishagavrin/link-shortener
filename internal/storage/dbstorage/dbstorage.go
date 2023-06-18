@@ -154,7 +154,7 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 
 	var shorts []storage.BatchResURL
 	// Delete old records for tests
-	// _, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
+	_, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
 
 	query := `
 		INSERT INTO public.short_links (user_id, origin, short, correlation_id) 
