@@ -71,8 +71,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// h.l.Info("redirect")
-	fmt.Println("REDIRECT")
-	fmt.Println(string(foundedURL))
+	fmt.Println("REDIRECT: ", string(foundedURL))
 	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
