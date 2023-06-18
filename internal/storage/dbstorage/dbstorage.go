@@ -139,9 +139,6 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 
 // Save url batch
 func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
 	type temp struct {
 		ID,
 		Origin,
@@ -162,9 +159,8 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	// _, _ = s.dbi.Exec(ctx, "truncate table public.short_links;")
+	_, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
 
-	// sqlBunchNewRecord for new record in db
 	query := `
 		INSERT INTO public.short_links (user_id, origin, short, correlation_id) 
 		VALUES (@user_id, @origin, @short, @correlation_id)
@@ -172,12 +168,12 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 		`
 
 	// Start transaction
-	tx, err := s.dbi.Begin(ctx)
+	tx, err := s.dbi.Begin(context.Background())
 	if err != nil {
 		return shorts, err
 	}
 
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(context.Background())
 
 	for _, v := range buffer {
 		// Add record to transaction
@@ -188,7 +184,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 			"correlation_id": v.ID,
 		}
 
-		if _, err = tx.Exec(ctx, query, args); err == nil {
+		if _, err = tx.Exec(context.Background(), query, args); err == nil {
 			shorts = append(shorts, storage.BatchShortURLs{
 				Short: v.Short,
 				ID:    v.ID,
@@ -198,7 +194,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 		}
 	}
 
-	err = tx.Commit(ctx)
+	err = tx.Commit(context.Background())
 	if err != nil {
 		return nil, err
 	}

@@ -76,11 +76,11 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
-
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
+
 	var urls []storage.BatchURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
