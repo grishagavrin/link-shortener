@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/user"
@@ -21,11 +22,6 @@ import (
 // PostgreSQLStorage storage
 type PostgreSQLStorage struct {
 }
-
-// ErrURLNotFound error by package level
-var ErrURLNotFound = errors.New("url not found")
-var ErrAlreadyHasShort = errors.New("already has short")
-var ErrURLIsGone = errors.New("url is gone")
 
 func New() (*PostgreSQLStorage, error) {
 	// Check if scheme exist
@@ -59,11 +55,11 @@ func (s *PostgreSQLStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, err
 	err := dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
 
 	if gone {
-		return "", ErrURLIsGone
+		return "", errs.ErrURLIsGone
 	}
 
 	if err != nil {
-		return "", ErrURLNotFound
+		return "", errs.ErrURLNotFound
 	}
 
 	return origin, nil
@@ -129,7 +125,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 			if pgErr.Code == pgerrcode.UniqueViolation {
 				var short storage.URLKey
 				_ = dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
-				return short, ErrAlreadyHasShort
+				return short, errs.ErrAlreadyHasShort
 			}
 		}
 		return key, nil

@@ -27,13 +27,12 @@ type Handler struct {
 	s storage.Repository
 }
 
-func New() (*Handler, error) {
+func New(l *zap.Logger) (*Handler, error) {
 	_, err := db.Instance()
 	if err == nil {
-		logger.Info("Set db handler")
+		l.Info("Set db handler")
 		s, err := dbstorage.New()
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		return &Handler{
@@ -59,11 +58,9 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	foundedURL, err := h.s.GetLinkDB(storage.URLKey(q))
 
 	if err != nil {
-		if errors.Is(err, dbstorage.ErrURLIsGone) {
+		if errors.Is(err, errs.ErrURLIsGone) {
 			logger.Info("Get error is gone", zap.Error(err))
-			// http.Error(res, dbstorage.ErrURLIsGone.Error(), http.StatusGone)
-			res.WriteHeader(http.StatusGone)
-			// res.Write([]byte(dbstorage.ErrURLIsGone.Error()))
+			http.Error(res, errs.ErrURLIsGone.Error(), http.StatusGone)
 			return
 		}
 
@@ -144,7 +141,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
 	status := http.StatusCreated
 
-	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
 
@@ -180,7 +177,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	}
 	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
 	status := http.StatusCreated
-	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
 

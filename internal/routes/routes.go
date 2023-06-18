@@ -1,18 +1,17 @@
 package routes
 
 import (
-	"log"
-
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
+	"go.uber.org/zap"
 )
 
-func ServiceRouter() chi.Router {
+func ServiceRouter(l *zap.Logger) chi.Router {
 	r := chi.NewRouter()
-	h, err := handlers.New()
+	h, err := handlers.New(l)
 	if err != nil {
-		log.Fatal("get instance db error")
+		l.Fatal("get instance ram/db error: ", zap.Error(err))
 	}
 
 	r.Use(middlewares.GzipMiddleware)

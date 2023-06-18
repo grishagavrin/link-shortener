@@ -31,7 +31,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(),
+		Handler: routes.ServiceRouter(l),
 	}
 
 	go func() {
