@@ -2,7 +2,6 @@ package ramstorage
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -10,6 +9,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
+	"go.uber.org/zap"
 )
 
 var errNotFoundURL = errors.New("url not found in DB")
@@ -17,11 +17,13 @@ var errNotFoundURL = errors.New("url not found in DB")
 type RAMStorage struct {
 	MU sync.Mutex
 	DB map[user.UniqUser]storage.ShortLinks
+	l  *zap.Logger
 }
 
-func New() (*RAMStorage, error) {
+func New(l *zap.Logger) (*RAMStorage, error) {
 	r := &RAMStorage{
 		DB: make(map[user.UniqUser]storage.ShortLinks),
+		l:  l,
 	}
 	if err := r.Load(); err != nil {
 		return r, err
@@ -41,7 +43,8 @@ func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, erro
 func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
-	fmt.Println("USERID", userID)
+
+	r.l.Sugar().Infof("userID: ", string(userID))
 	key, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err
@@ -49,12 +52,12 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (sto
 
 	currentURLUser := storage.ShortLinks{}
 	currentURLAll := storage.ShortLinks{}
+
 	if urls, ok := r.DB[userID]; ok {
 		currentURLUser = urls
 	}
 
 	currentURLUser[key] = url
-
 	r.DB[userID] = currentURLUser
 
 	if urls, ok := r.DB["all"]; ok {

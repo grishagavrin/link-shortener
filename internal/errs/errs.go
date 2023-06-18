@@ -15,3 +15,4 @@ var ErrAlreadyHasShort = errors.New("already has short")              //Already 
 var ErrURLIsGone = errors.New("url is gone")                          //URL is gone
 var ErrUnknownEnvOrFlag = errors.New("unknown env or flag param")     //Unknown env of flag
 var ErrFileStorageNotClose = errors.New("file storage has not close") //File storage not close
+var ErrCorrelation = errors.New(("correlationIds is null"))           //CorrelationIds is null

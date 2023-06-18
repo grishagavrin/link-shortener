@@ -31,14 +31,14 @@ func New(l *zap.Logger) (*Handler, error) {
 	_, err := db.Instance()
 	if err == nil {
 		l.Info("Set DB handler")
-		storage, err := dbstorage.New()
+		storage, err := dbstorage.New(l)
 		if err != nil {
 			return nil, err
 		}
 
 		return &Handler{s: storage, l: l}, nil
 	} else {
-		storage, err := ramstorage.New()
+		storage, err := ramstorage.New(l)
 		if err != nil {
 			return nil, err
 		}

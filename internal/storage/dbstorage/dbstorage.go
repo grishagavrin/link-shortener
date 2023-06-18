@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
-	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
@@ -23,9 +22,10 @@ import (
 // PostgreSQLStorage storage
 type PostgreSQLStorage struct {
 	dbi *pgxpool.Pool
+	l   *zap.Logger
 }
 
-func New() (*PostgreSQLStorage, error) {
+func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 	// Init DB
 	dbi, _ := db.Instance()
 	// Check if scheme exist
@@ -49,6 +49,7 @@ func New() (*PostgreSQLStorage, error) {
 
 	return &PostgreSQLStorage{
 		dbi: dbi,
+		l:   l,
 	}, nil
 }
 
@@ -193,7 +194,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 				ID:    v.ID,
 			})
 		} else {
-			logger.Info("Save bunch error", zap.Error(err))
+			s.l.Info("Save bunch error", zap.Error(err))
 		}
 	}
 
@@ -208,7 +209,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
 	dbi, _ := db.Instance()
 	if len(correlationIds) == 0 {
-		return fmt.Errorf("correlationIds is null")
+		return errs.ErrCorrelation
 	}
 
 	query := `
@@ -229,14 +230,13 @@ func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID s
 		_, err := results.Exec()
 		if err != nil {
 			var pgErr *pgconn.PgError
+
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 				log.Printf("update error on %s", id)
 				continue
 			}
-
 			return fmt.Errorf("unable to insert row: %w", err)
 		}
 	}
-
 	return results.Close()
 }
