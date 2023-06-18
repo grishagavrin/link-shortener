@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/utils/db"
@@ -27,24 +28,24 @@ func main() {
 
 	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
 	if err != nil {
-		l.Fatal("app error exit", zap.Error(err))
+		l.Fatal("Config instance error: ", zap.Error(err))
+	}
+
+	//DB Instance
+	dbi, err := db.Instance(l)
+	if errors.Is(err, errs.ErrDatabaseNotAvaliable) {
+		l.Info("DB error", zap.Error(err))
 	}
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(),
+		Handler: routes.ServiceRouter(l),
 	}
 
-	// l.Info("Start server address: " + srvAddr)
-	// err = srv.ListenAndServe()
-	// if err != nil {
-	// 	log.Fatalf("Could not start server: %v", err)
-	// }
-
 	go func() {
-		l.Fatal("app error exit", zap.Error(srv.ListenAndServe()))
+		l.Fatal("App error exit", zap.Error(srv.ListenAndServe()))
 	}()
-	l.Info("The service is ready to listen and serve.")
+	l.Info("The server is ready")
 
 	// Add context for Graceful shutdown
 	killSignal := <-interrupt
@@ -55,14 +56,11 @@ func main() {
 		l.Info("Got SIGTERM...")
 	}
 
-	// database close
-	conn, err := db.Instance()
+	// Database close
 	if err == nil {
 		l.Info("Closing connect to db")
-		err := conn.Close(context.Background())
-		if err != nil {
-			l.Info("Closing don't close")
-		}
+		dbi.Close()
 	}
+
 	l.Info("Closing connect to db success")
 }

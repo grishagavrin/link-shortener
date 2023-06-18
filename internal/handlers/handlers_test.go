@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +43,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 }
 
 func TestShortenURL(t *testing.T) {
-	r := routes.ServiceRouter()
+	l, err := logger.Instance()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := routes.ServiceRouter(l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -55,7 +61,11 @@ func TestShortenURL(t *testing.T) {
 }
 
 func TestWriteURL(t *testing.T) {
-	r := routes.ServiceRouter()
+	l, err := logger.Instance()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := routes.ServiceRouter(l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -69,7 +79,11 @@ func TestWriteURL(t *testing.T) {
 }
 
 func TestGetURL(t *testing.T) {
-	r := routes.ServiceRouter()
+	l, err := logger.Instance()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := routes.ServiceRouter(l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 

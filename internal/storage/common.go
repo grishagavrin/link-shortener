@@ -1,24 +1,29 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/grishagavrin/link-shortener/internal/user"
 )
 
 type ShortURL string
-type URLKey string
-type ShortLinks map[URLKey]ShortURL
-type BatchURL struct {
-	ID     string `json:"correlation_id"`
+type Origin string
+type ShortLinks map[ShortURL]Origin
+
+type BatchReqURL struct {
+	CorrID string `json:"correlation_id"`
 	Origin string `json:"original_url"`
 }
-type BatchShortURLs struct {
-	Short string `json:"short_url"`
-	ID    string `json:"correlation_id"`
+
+type BatchResURL struct {
+	CorrID string `json:"correlation_id"`
+	Short  string `json:"short_url"`
 }
 
 type Repository interface {
-	GetLinkDB(user.UniqUser, URLKey) (ShortURL, error)
-	SaveLinkDB(user.UniqUser, ShortURL) (URLKey, error)
-	SaveBatch(urls []BatchURL) ([]BatchShortURLs, error)
+	GetLinkDB(ShortURL) (Origin, error)
+	SaveLinkDB(user.UniqUser, Origin) (ShortURL, error)
+	SaveBatch(user.UniqUser, []BatchReqURL) ([]BatchResURL, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)
+	BunchUpdateAsDeleted(context.Context, []string, string) error
 }
