@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
@@ -25,15 +26,6 @@ import (
 type Handler struct {
 	s storage.Repository
 }
-
-var errEmptyBody = errors.New("body is empty")
-var errFieldsJSON = errors.New("invalid fields in json")
-var errInternalSrv = errors.New("internal error on server")
-var errCorrectURL = fmt.Errorf("enter correct url parameter")
-var errNoContent = errors.New("no content")
-var errBadRequest = errors.New("bad request")
-
-var myCook string = "default"
 
 func New() (*Handler, error) {
 	_, err := db.Instance()
@@ -59,7 +51,7 @@ func New() (*Handler, error) {
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	q := chi.URLParam(req, "id")
 	if len(q) != config.LENHASH {
-		http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -76,7 +68,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		}
 
 		logger.Info("Get error is bad request", zap.Error(err))
-		http.Error(res, errBadRequest.Error(), http.StatusBadRequest)
+		http.Error(res, errs.ErrBadRequest.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -88,25 +80,26 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 
 	if err != nil {
-		setBadResponse(res, errInternalSrv)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
 	var urls []storage.BatchURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
-		setBadResponse(res, errCorrectURL)
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
 	shorts, err := h.s.SaveBatch(urls)
 	if err != nil {
-		setBadResponse(res, errInternalSrv)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
 
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
-		setBadResponse(res, errBadRequest)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Prepare results
@@ -124,7 +117,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	setBadResponse(res, errInternalSrv)
+	http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 }
 
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
@@ -137,7 +130,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	body := string(b)
 
 	if body == "" {
-		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
+		http.Error(res, errs.ErrEmptyBody.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -175,7 +168,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	decJSON.DisallowUnknownFields()
 
 	if err := decJSON.Decode(&reqBody); err != nil {
-		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
+		http.Error(res, errs.ErrFieldsJSON.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -190,7 +183,6 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
-	// }
 
 	resBody := struct {
 		Result string `json:"result"`
@@ -200,7 +192,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 	js, err := json.Marshal(resBody)
 	if err != nil {
-		http.Error(res, errInternalSrv.Error(), http.StatusInternalServerError)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -228,7 +220,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 
 	links, err := h.s.LinksByUser(user.UniqUser(userID))
 	if err != nil {
-		http.Error(res, errNoContent.Error(), http.StatusNoContent)
+		http.Error(res, errs.ErrNoContent.Error(), http.StatusNoContent)
 		return
 	}
 
@@ -263,20 +255,20 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 
 	if err != nil {
-		setBadResponse(res, errInternalSrv)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var correlationIDs []string
 	err = json.Unmarshal(body, &correlationIDs)
 	if err != nil {
-		setBadResponse(res, errCorrectURL)
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate count
 	if len(correlationIDs) == 0 {
-		setBadResponse(res, errCorrectURL)
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -301,8 +293,6 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 
 	var idS []string
 	for value := range out {
-		// fmt.Println("Value updated:", value)
-		// ids = ()
 		idS = append(idS, value)
 	}
 	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, userID)
@@ -328,10 +318,6 @@ func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan s
 					wg.Done()
 					break
 				}
-				// updated, err := dbstorage.BunchUpdateAsDeleted(ctx, value, userID)
-				// if err != nil {
-				// 	fmt.Println(err)
-				// }
 
 				out <- value
 			}
@@ -343,9 +329,4 @@ func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan s
 		close(out)
 	}()
 	return out
-}
-
-// setBadRequest set bad response
-func setBadResponse(w http.ResponseWriter, e error) {
-	http.Error(w, e.Error(), http.StatusBadRequest)
 }
