@@ -82,20 +82,21 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// Get url from json data
-	var urls []storage.BatchURL
+	var urls []storage.BatchReqURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
 		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
+	fmt.Println("URLS REQ: ", urls)
 
-	userID := middlewares.GetContextUserID(req)
+	shorts, err := h.s.SaveBatch(middlewares.GetContextUserID(req), urls)
 
-	shorts, err := h.s.SaveBatch(userID, urls)
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
+
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
@@ -106,6 +107,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	for k := range shorts {
 		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
 	}
+	fmt.Println("URLS RES: ", shorts)
 
 	body, err = json.Marshal(shorts)
 	if err == nil {
@@ -113,12 +115,11 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("Content-Type", "application/json; charset=utf-8")
 		res.WriteHeader(http.StatusCreated)
 		_, err = res.Write(body)
-		if err == nil {
-			return
+		if err != nil {
+			http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		}
 	}
 
-	http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 }
 
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {

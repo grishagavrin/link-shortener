@@ -137,26 +137,22 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 }
 
 // Save url batch
-func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
-	type temp struct {
-		ID,
-		Origin,
-		Short string
-	}
+func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL) ([]storage.BatchResURL, error) {
+	type temp struct{ Corr_ID, Origin, Short string }
 
 	var buffer []temp
 	for _, v := range urls {
-		key, _ := utils.RandStringBytes()
+		shortKey, _ := utils.RandStringBytes()
 
 		var t = temp{
-			ID:     v.ID,
-			Origin: v.Origin,
-			Short:  string(key),
+			Corr_ID: v.Corr_ID,
+			Origin:  v.Origin,
+			Short:   string(shortKey),
 		}
 		buffer = append(buffer, t)
 	}
 
-	var shorts []storage.BatchShortURLs
+	var shorts []storage.BatchResURL
 	// Delete old records for tests
 	// _, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
 
@@ -168,11 +164,10 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 
 	// Start transaction
 	tx, err := s.dbi.Begin(context.Background())
+	defer tx.Rollback(context.Background())
 	if err != nil {
 		return shorts, err
 	}
-
-	defer tx.Rollback(context.Background())
 
 	for _, v := range buffer {
 		// Add record to transaction
@@ -180,13 +175,13 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 			"user_id":        userID,
 			"origin":         v.Origin,
 			"short":          v.Short,
-			"correlation_id": v.ID,
+			"correlation_id": v.Corr_ID,
 		}
 
 		if _, err = tx.Exec(context.Background(), query, args); err == nil {
-			shorts = append(shorts, storage.BatchShortURLs{
-				Short: v.Short,
-				ID:    v.ID,
+			shorts = append(shorts, storage.BatchResURL{
+				Short:   v.Short,
+				Corr_ID: v.Corr_ID,
 			})
 		} else {
 			s.l.Info("Save bunch error", zap.Error(err))

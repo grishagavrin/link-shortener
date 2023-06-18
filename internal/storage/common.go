@@ -10,20 +10,20 @@ type ShortURL string
 type Origin string
 type ShortLinks map[Origin]ShortURL
 
-type BatchURL struct {
-	ID     string `json:"correlation_id"`
-	Origin string `json:"original_url"`
+type BatchReqURL struct {
+	Corr_ID string `json:"correlation_id"`
+	Origin  string `json:"original_url"`
 }
 
-type BatchShortURLs struct {
-	Short string `json:"short_url"`
-	ID    string `json:"correlation_id"`
+type BatchResURL struct {
+	Corr_ID string `json:"correlation_id"`
+	Short   string `json:"short_url"`
 }
 
 type Repository interface {
 	GetLinkDB(Origin) (ShortURL, error)
 	SaveLinkDB(user.UniqUser, ShortURL) (Origin, error)
-	SaveBatch(user.UniqUser, []BatchURL) ([]BatchShortURLs, error)
+	SaveBatch(user.UniqUser, []BatchReqURL) ([]BatchResURL, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)
 	BunchUpdateAsDeleted(context.Context, []string, string) error
 }

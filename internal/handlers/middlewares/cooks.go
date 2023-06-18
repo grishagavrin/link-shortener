@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -31,9 +30,9 @@ func CooksMiddleware(next http.Handler) http.Handler {
 
 		// Generate hash from userId
 		encoded, err := utils.Encode(userID)
-		// logger.Info("UserID", zap.String("ID", userID))
+		logger.Info("UserID", zap.String("ID", userID))
 		// logger.Info("User encoded", zap.String("Encoded", encoded))
-		fmt.Println("COOKIE VAL:", encoded)
+		// fmt.Println("COOKIE VAL:", encoded)
 		if err == nil {
 			cookie := http.Cookie{
 				Name:     "userId",
