@@ -52,7 +52,7 @@ func CooksMiddleware(next http.Handler) http.Handler {
 // GetContextUserID return uniq user id from session
 func GetContextUserID(req *http.Request) user.UniqUser {
 	userIDCtx := req.Context().Value(UserIDCtxName)
-	userID := "default"
+	userID := "all"
 	if userIDCtx != nil {
 		// Convert interface type to user.UniqUser
 		userID = userIDCtx.(string)

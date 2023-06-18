@@ -23,7 +23,7 @@ type BatchShortURLs struct {
 type Repository interface {
 	GetLinkDB(Origin) (ShortURL, error)
 	SaveLinkDB(user.UniqUser, ShortURL) (Origin, error)
-	SaveBatch(urls []BatchURL) ([]BatchShortURLs, error)
+	SaveBatch(user.UniqUser, []BatchURL) ([]BatchShortURLs, error)
 	LinksByUser(userID user.UniqUser) (ShortLinks, error)
 	BunchUpdateAsDeleted(context.Context, []string, string) error
 }

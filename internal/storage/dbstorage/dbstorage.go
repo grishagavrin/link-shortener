@@ -137,7 +137,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 }
 
 // Save url batch
-func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
+func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
 	type temp struct {
 		ID,
 		Origin,
@@ -158,7 +158,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	_, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
+	// _, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
 
 	query := `
 		INSERT INTO public.short_links (user_id, origin, short, correlation_id) 
@@ -177,7 +177,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	for _, v := range buffer {
 		// Add record to transaction
 		args := pgx.NamedArgs{
-			"user_id":        "all",
+			"user_id":        userID,
 			"origin":         v.Origin,
 			"short":          v.Short,
 			"correlation_id": v.ID,

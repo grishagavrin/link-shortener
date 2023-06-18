@@ -75,12 +75,13 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
+	h.l.Info("BunchSaveJSON run")
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
-
+	// Get url from json data
 	var urls []storage.BatchURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
@@ -88,12 +89,13 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	shorts, err := h.s.SaveBatch(urls)
+	userID := middlewares.GetContextUserID(req)
+
+	shorts, err := h.s.SaveBatch(userID, urls)
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
-
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)

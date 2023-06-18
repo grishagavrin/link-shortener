@@ -109,7 +109,7 @@ func (r *RAMStorage) Load() error {
 }
 
 // Batch save
-func (r *RAMStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
+func (r *RAMStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
 	var shorts []storage.BatchShortURLs
 	return shorts, nil
 }
