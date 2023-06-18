@@ -7,13 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (int, string) {
-
 	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBufferString(body))
 	require.NoError(t, err)
 
@@ -22,7 +22,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-
 	defer resp.Body.Close()
 
 	return resp.StatusCode, string(respBody)
@@ -35,8 +34,11 @@ func TestServerRun(t *testing.T) {
 
 	statusCode, body := testRequest(t, ts, "POST", "/", "http://yandex.ru")
 	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, "http://localhost:8080/0", body)
 
-	statusCode, _ = testRequest(t, ts, "GET", "/0", "")
+	statusCode, _ = testRequest(t, ts, "GET", "/"+body[len(body)-config.LENHASH:], "")
 	assert.Equal(t, http.StatusOK, statusCode)
+
+	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
+	assert.Equal(t, "invalid fields in json\n", body)
+	assert.Equal(t, http.StatusBadRequest, statusCode)
 }
