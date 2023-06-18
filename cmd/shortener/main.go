@@ -29,6 +29,9 @@ func main() {
 		l.Fatal("config instance error: ", zap.Error(err))
 	}
 
+	//DB Instance
+	dbi, err := db.Instance(l)
+
 	srv := &http.Server{
 		Addr:    srvAddr,
 		Handler: routes.ServiceRouter(l),
@@ -48,11 +51,11 @@ func main() {
 		l.Info("Got SIGTERM...")
 	}
 
-	// database close
-	conn, err := db.Instance()
+	// Database close
+
 	if err == nil {
 		l.Info("Closing connect to db")
-		conn.Close()
+		dbi.Close()
 	}
 
 	l.Info("Closing connect to db success")

@@ -27,7 +27,7 @@ type PostgreSQLStorage struct {
 
 func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 	// Init DB
-	dbi, _ := db.Instance()
+	dbi, _ := db.Instance(l)
 	// Check if scheme exist
 	sql := `
 	CREATE TABLE IF NOT EXISTS public.short_links(
@@ -206,8 +206,8 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 	return shorts, nil
 }
 
-func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
-	dbi, _ := db.Instance()
+func BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string, l *zap.Logger) error {
+	dbi, _ := db.Instance(l)
 	if len(correlationIds) == 0 {
 		return errs.ErrCorrelation
 	}

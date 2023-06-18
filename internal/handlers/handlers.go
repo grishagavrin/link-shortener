@@ -28,7 +28,7 @@ type Handler struct {
 }
 
 func New(l *zap.Logger) (*Handler, error) {
-	_, err := db.Instance()
+	_, err := db.Instance(l)
 	if err == nil {
 		l.Info("Set DB handler")
 		storage, err := dbstorage.New(l)
@@ -192,7 +192,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
-	conn, err := db.Instance()
+	conn, err := db.Instance(h.l)
 	if err == nil {
 		if err := conn.Ping(req.Context()); err == nil {
 			res.WriteHeader(http.StatusOK)
@@ -281,7 +281,7 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	for value := range out {
 		idS = append(idS, value)
 	}
-	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, string(userID))
+	err = dbstorage.BunchUpdateAsDeleted(ctx, idS, string(userID), h.l)
 	if err != nil {
 		fmt.Println(err)
 	}

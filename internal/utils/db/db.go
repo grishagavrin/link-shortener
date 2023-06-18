@@ -2,22 +2,20 @@ package db
 
 import (
 	"context"
-	"errors"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
-	"github.com/grishagavrin/link-shortener/internal/logger"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
-
-var ErrDatabaseNotAvaliable = errors.New("db not avaliable")
 
 var instance *pgxpool.Pool
 
-func Instance() (*pgxpool.Pool, error) {
+func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
 		dsn, _ := config.Instance().GetCfgValue(config.DatabaseDSN)
 		if dsn == "" {
-			return instance, ErrDatabaseNotAvaliable
+			return instance, errs.ErrDatabaseNotAvaliable
 		}
 
 		inst, err := pgxpool.New(context.Background(), dsn)
@@ -26,7 +24,8 @@ func Instance() (*pgxpool.Pool, error) {
 		}
 
 		instance = inst
-		logger.Info("Connecting to DB")
+		l.Info("Connecting to DB")
 	}
+
 	return instance, nil
 }

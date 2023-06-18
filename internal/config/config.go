@@ -37,7 +37,7 @@ func Instance() *myConfig {
 
 func (c *myConfig) initENV() {
 	if err := env.Parse(c); err != nil {
-		log.Fatalf("can`t load ENV %+v\n", err)
+		log.Fatalf("Can`t load ENV %+v\n", err)
 	}
 }
 

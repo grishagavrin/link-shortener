@@ -16,3 +16,4 @@ var ErrURLIsGone = errors.New("url is gone")                          //URL is g
 var ErrUnknownEnvOrFlag = errors.New("unknown env or flag param")     //Unknown env of flag
 var ErrFileStorageNotClose = errors.New("file storage has not close") //File storage not close
 var ErrCorrelation = errors.New(("correlationIds is null"))           //CorrelationIds is null
+var ErrDatabaseNotAvaliable = errors.New("db not avaliable")          // DB not avaliable
