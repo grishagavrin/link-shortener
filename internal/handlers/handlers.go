@@ -70,7 +70,9 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	h.l.Info("redirect")
+	// h.l.Info("redirect")
+	fmt.Println("REDIRECT")
+	fmt.Println(string(foundedURL))
 	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
@@ -88,7 +90,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Println("URLS REQ: ", urls)
+	fmt.Println("URLS REQ BATCH: ", urls)
 
 	shorts, err := h.s.SaveBatch(middlewares.GetContextUserID(req), urls)
 
@@ -107,7 +109,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	for k := range shorts {
 		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
 	}
-	fmt.Println("URLS RES: ", shorts)
+	fmt.Println("URLS RES BATCH: ", shorts)
 
 	body, err = json.Marshal(shorts)
 	if err == nil {
