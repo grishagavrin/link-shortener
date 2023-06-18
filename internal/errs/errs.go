@@ -13,3 +13,4 @@ var ErrFieldsJSON = errors.New("invalid fields in json")      //Invalid fields i
 var ErrURLNotFound = errors.New("url not found")              //URL not found
 var ErrAlreadyHasShort = errors.New("already has short")      //Already has short link
 var ErrURLIsGone = errors.New("url is gone")                  //URL is gone
+var ErrUnknownEnvOrFlag = errors.New("unknown env or flag param")

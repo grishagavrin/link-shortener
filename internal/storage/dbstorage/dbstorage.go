@@ -16,14 +16,18 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 // PostgreSQLStorage storage
 type PostgreSQLStorage struct {
+	dbi *pgxpool.Pool
 }
 
 func New() (*PostgreSQLStorage, error) {
+	// Init DB
+	dbi, _ := db.Instance()
 	// Check if scheme exist
 	sql := `
 	CREATE TABLE IF NOT EXISTS public.short_links(
@@ -39,20 +43,21 @@ func New() (*PostgreSQLStorage, error) {
     on public.short_links (user_id, origin);
 	`
 
-	if err := db.Insert(context.Background(), sql); err != nil {
+	if _, err := dbi.Exec(context.Background(), sql); err != nil {
 		return &PostgreSQLStorage{}, err
 	}
 
-	return &PostgreSQLStorage{}, nil
+	return &PostgreSQLStorage{
+		dbi: dbi,
+	}, nil
 }
 
 func (s *PostgreSQLStorage) GetLinkDB(key storage.URLKey) (storage.ShortURL, error) {
-	dbi, _ := db.Instance()
 	var origin storage.ShortURL
 	var gone bool
 
 	query := "SELECT origin, is_deleted FROM public.short_links WHERE short=$1"
-	err := dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
+	err := s.dbi.QueryRow(context.Background(), query, string(key)).Scan(&origin, &gone)
 
 	if gone {
 		return "", errs.ErrURLIsGone
@@ -70,10 +75,9 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 	// не забываем освободить ресурс
 	defer cancel()
 	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
-	dbi, _ := db.Instance()
 
 	origins := storage.ShortLinks{}
-	rows, err := dbi.Query(ctx, query, string(userID))
+	rows, err := s.dbi.Query(ctx, query, string(userID))
 	if err != nil {
 		return origins, err
 	}
@@ -95,7 +99,6 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 // Save url in storage of short links
 func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.URLKey, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
 	defer cancel()
 	key, err := utils.RandStringBytes()
 	if err != nil {
@@ -117,14 +120,13 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 		"short":   key,
 	}
 
-	dbi, _ := db.Instance()
 	pgErr := &pgconn.PgError{}
 
-	if _, err := dbi.Exec(ctx, queryInsert, args); err != nil {
+	if _, err := s.dbi.Exec(ctx, queryInsert, args); err != nil {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
 				var short storage.URLKey
-				_ = dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
+				_ = s.dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
 				return short, errs.ErrAlreadyHasShort
 			}
 		}
@@ -157,10 +159,9 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 		buffer = append(buffer, t)
 	}
 
-	dbi, _ := db.Instance()
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	_, _ = dbi.Exec(ctx, "truncate table public.short_links;")
+	_, _ = s.dbi.Exec(ctx, "truncate table public.short_links;")
 
 	// sqlBunchNewRecord for new record in db
 	query := `
@@ -170,7 +171,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 		`
 
 	// Start transaction
-	tx, err := dbi.Begin(ctx)
+	tx, err := s.dbi.Begin(ctx)
 	if err != nil {
 		return shorts, err
 	}

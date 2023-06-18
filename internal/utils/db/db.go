@@ -30,16 +30,3 @@ func Instance() (*pgxpool.Pool, error) {
 	}
 	return instance, nil
 }
-
-// Insert execute query to active connect
-func Insert(ctx context.Context, query string, args ...interface{}) error {
-	c, err := Instance()
-	if err == nil {
-		if _, err := c.Exec(ctx, query, args...); err == nil {
-			return nil
-		} else {
-			return err
-		}
-	}
-	return err
-}

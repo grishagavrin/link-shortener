@@ -26,7 +26,7 @@ func main() {
 
 	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
 	if err != nil {
-		l.Fatal("app error exit", zap.Error(err))
+		l.Fatal("config instance error: ", zap.Error(err))
 	}
 
 	srv := &http.Server{
