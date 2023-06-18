@@ -97,7 +97,7 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 	return origins, nil
 }
 
-// Save url in storage of short links
+// Save url
 func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortURL) (storage.Origin, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -137,7 +137,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.ShortUR
 	return key, nil
 }
 
-// Save url in storage of short links
+// Save url batch
 func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchShortURLs, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	// не забываем освободить ресурс
@@ -162,7 +162,7 @@ func (s *PostgreSQLStorage) SaveBatch(urls []storage.BatchURL) ([]storage.BatchS
 
 	var shorts []storage.BatchShortURLs
 	// Delete old records for tests
-	_, _ = s.dbi.Exec(ctx, "truncate table public.short_links;")
+	// _, _ = s.dbi.Exec(ctx, "truncate table public.short_links;")
 
 	// sqlBunchNewRecord for new record in db
 	query := `
