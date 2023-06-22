@@ -1,8 +1,3 @@
-// go test -bench=BenchmarkHandler_SaveTXT -benchmem -benchtime=2500x -memprofile base.pprof // Run one bench
-// go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof // See difference
-// go test -bench=. -memprofile=base.pprof // Run all benchs in handlers
-// go tool pprof -http=":9090" handlers.test base.pprof // See profile
-// go tool pprof -http=":9090" handlers.test result.pprof // See result profile
 package handlers
 
 import (
