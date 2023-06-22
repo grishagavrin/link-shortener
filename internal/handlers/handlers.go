@@ -124,6 +124,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
+	h.l.Info("SaveTXT run")
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -139,14 +140,15 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.Origin(body))
+	origin, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.Origin(body))
 	status := http.StatusCreated
+	h.l.Info("Save origin", zap.String("origin", string(origin)))
 
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
 
-	response := fmt.Sprintf("%s/%s", baseURL, urlKey)
+	response := fmt.Sprintf("%s/%s", baseURL, origin)
 	res.WriteHeader(status)
 	res.Write([]byte(response))
 }
@@ -208,9 +210,10 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
+	// userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
 	// Convert interface type to user.UniqUser
-	userID := userIDCtx.(string)
+	// userID := userIDCtx.(string)
+	userID := middlewares.GetContextUserID(req)
 
 	links, err := h.s.LinksByUser(user.UniqUser(userID))
 	if err != nil {
@@ -222,10 +225,14 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 		Short  string `json:"short_url"`
 		Origin string `json:"original_url"`
 	}
-	var lks []coupleLinks
+
+	// var lks []coupleLinks
+	lks := make([]coupleLinks, 0, len(links))
 	baseURL, _ := config.Instance().GetCfgValue(config.BaseURL)
 
 	// Get all links
+
+	// s := make([]storage.ShortLinks, 0, len(links))
 	for k, v := range links {
 		lks = append(lks, coupleLinks{
 			Short:  fmt.Sprintf("%s/%s", baseURL, string(k)),

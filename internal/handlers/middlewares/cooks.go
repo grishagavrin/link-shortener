@@ -14,7 +14,8 @@ import (
 type ContextType string
 
 var CookieUserIDName = "userId"
-var CookieUserIDDefault = "default"
+
+// var CookieUserIDDefault = "all"
 
 // ContextType set context name for user id
 var UserIDCtxName ContextType = "ctxUserId"
