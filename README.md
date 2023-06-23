@@ -12,7 +12,7 @@
 
 # test db
 
-1. postgresql://postgres:**\*\***@127.0.0.1:5432/golangDB
+1. postgresql://postgres:...@127.0.0.1:5432/golangDB
 
 # bench tests
 
@@ -25,3 +25,12 @@
 # go fmt
 
 1. gofmt -s -w . in root directory
+
+# go doc
+
+1. godoc -http=:6061
+
+# swagger
+
+1. swag init --output ../../swagger/
+2. http://127.0.0.1:8080/swagger/index.html

@@ -1,3 +1,7 @@
+// The main module where the application is initialized.
+// The packages below use:
+//
+//	configs, errs, logger, routes, utils
 package main
 
 import (
@@ -14,14 +18,26 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/utils/db"
+	_ "github.com/grishagavrin/link-shortener/swagger"
+
 	"go.uber.org/zap"
 )
+
+// @Title Link shortener API
+// @Description Сокращение ссылок
+// @Version 1.0
+
+// @Contact.email grigorygavrin@gmail.com
+
+// @BasePath /
+// @Host 127.0.0.1:8080
 
 func main() {
 	// Context with cancel func
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
+	// Logger instance
 	l, err := logger.Instance()
 	if err != nil {
 		log.Fatal(err)

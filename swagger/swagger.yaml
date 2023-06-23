@@ -1,0 +1,10 @@
+basePath: /
+host: 127.0.0.1:8080
+info:
+  contact:
+    email: grigorygavrin@gmail.com
+  description: Сокращение ссылок
+  title: Link shortener API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

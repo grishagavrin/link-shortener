@@ -22,11 +22,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// Handler general type for handler
 type Handler struct {
+	// s - for storage, repository pattern
 	s storage.Repository
+	// l - zap logger instance
 	l *zap.Logger
 }
 
+// New Allocation new handler
 func New(l *zap.Logger) (*Handler, error) {
 	_, err := db.Instance(l)
 	if err == nil {
@@ -48,6 +52,15 @@ func New(l *zap.Logger) (*Handler, error) {
 	}
 }
 
+// GetLink godoc
+// @Tags Info
+// @Summary Запрос состояния сервиса
+// @ID infoHealth
+// @Accept  json
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Failure 500 {string} string "Внутренняя ошибка"
+// @Router /info/health [get]
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	q := chi.URLParam(req, "id")
 	if len(q) != config.LENHASH {
@@ -75,6 +88,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
+// BunchSaveJSON save data and return from mass
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	h.l.Info("BunchSaveJSON run")
 	body, err := io.ReadAll(req.Body)
@@ -123,6 +137,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 
 }
 
+// Save convert link to shorting and store in database
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	h.l.Info("SaveTXT run")
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
@@ -153,6 +168,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(response))
 }
 
+// SaveJSON convert link to shorting and store in database
 func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
@@ -197,6 +213,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write(js)
 }
 
+// Get ping from DB
 func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 	conn, err := db.Instance(h.l)
 	if err == nil {
@@ -209,6 +226,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetLinks get all urls from user
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	// userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
 	// Convert interface type to user.UniqUser
@@ -252,6 +270,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// DeleteBatch delete batch urls
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 
@@ -294,12 +313,13 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	}
 	err = h.s.BunchUpdateAsDeleted(ctx, idS, string(userID))
 	if err != nil {
-		fmt.Println(err)
+		h.l.Info("Butch update error", zap.Error(err))
 	}
 
 	res.WriteHeader(http.StatusAccepted)
 }
 
+// fanIn patter for delete batch
 func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan string {
 	var wg sync.WaitGroup
 	out := make(chan string)

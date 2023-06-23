@@ -1,0 +1,14 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Сокращение ссылок",
+        "title": "Link shortener API",
+        "contact": {
+            "email": "grigorygavrin@gmail.com"
+        },
+        "version": "1.0"
+    },
+    "host": "127.0.0.1:8080",
+    "basePath": "/",
+    "paths": {}
+}
