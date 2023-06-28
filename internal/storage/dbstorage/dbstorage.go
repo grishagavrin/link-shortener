@@ -3,7 +3,6 @@ package dbstorage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -204,28 +203,27 @@ func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, correlatio
 	query := `
 	UPDATE public.short_links 
 	SET is_deleted=true 
-	WHERE user_id=$1 AND short=$2;
+	WHERE user_id=@user_id AND short=ANY(@short);
 	`
-	batch := &pgx.Batch{}
 
-	for _, id := range correlationIds {
-		batch.Queue(query, userID, id)
+	tx, _ := s.dbi.Begin(ctx)
+	defer tx.Rollback(ctx)
+	args := pgx.NamedArgs{
+		"user_id": userID,
+		"short":   correlationIds,
 	}
 
-	results := s.dbi.SendBatch(ctx, batch)
-	defer results.Close()
-
-	for _, id := range correlationIds {
-		_, err := results.Exec()
-		if err != nil {
-			var pgErr *pgconn.PgError
-
-			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-				s.l.Sugar().Infof("update error on %s", id)
-				continue
-			}
-			return fmt.Errorf("unable to insert row: %w", err)
-		}
+	_, err := tx.Exec(ctx, query, args)
+	if err != nil {
+		s.l.Info("Save bunch error", zap.Error(err))
+		return err
 	}
-	return results.Close()
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		s.l.Info("TX commit error save bunch", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
