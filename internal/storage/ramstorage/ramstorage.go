@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
@@ -110,10 +111,61 @@ func (r *RAMStorage) Load() error {
 
 // Batch save
 func (r *RAMStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL) ([]storage.BatchResURL, error) {
-	var shorts []storage.BatchResURL
-	return shorts, nil
+	r.MU.Lock()
+	defer r.MU.Unlock()
+
+	var shortsRes []storage.BatchResURL
+
+	currentURLUser := storage.ShortLinks{}
+	currentURLAll := storage.ShortLinks{}
+
+	r.l.Sugar().Infof("userID: ", string(userID))
+
+	for _, url := range urls {
+		shortKey, _ := utils.RandStringBytes()
+
+		resItem := storage.BatchResURL{
+			CorrID: url.CorrID,
+			Short:  string(shortKey),
+		}
+
+		if urls, ok := r.DB[userID]; ok {
+			currentURLUser = urls
+		}
+
+		currentURLUser[shortKey] = storage.Origin(url.Origin)
+		r.DB[userID] = currentURLUser
+
+		if urls, ok := r.DB["all"]; ok {
+			currentURLAll = urls
+		}
+
+		currentURLAll[shortKey] = storage.Origin(url.Origin)
+		r.DB["all"] = currentURLAll
+		shortsRes = append(shortsRes, resItem)
+	}
+
+	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	if err != nil || fs == "" {
+		return shortsRes, nil
+	}
+
+	_ = filestorage.Write(fs, r.DB)
+	return shortsRes, nil
 }
 
 func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
+	r.MU.Lock()
+	defer r.MU.Unlock()
+
+	if len(correlationIds) == 0 {
+		return errs.ErrCorrelation
+	}
+
+	for _, v := range correlationIds {
+		delete(r.DB[user.UniqUser(userID)], storage.ShortURL(v))
+		delete(r.DB["all"], storage.ShortURL(v))
+	}
+
 	return nil
 }

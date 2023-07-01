@@ -210,9 +210,6 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	// userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	// Convert interface type to user.UniqUser
-	// userID := userIDCtx.(string)
 	userID := middlewares.GetContextUserID(req)
 
 	links, err := h.s.LinksByUser(user.UniqUser(userID))
