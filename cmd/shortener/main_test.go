@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
+	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +31,13 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 }
 
 func TestServerRun(t *testing.T) {
-	r := routes.ServiceRouter()
+	l, err := logger.Instance()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stor, _, _ := storage.Instance(l)
+	r := routes.ServiceRouter(stor, l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -39,6 +48,6 @@ func TestServerRun(t *testing.T) {
 	assert.Equal(t, http.StatusOK, statusCode)
 
 	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
-	assert.Equal(t, "invalid fields in json\n", body)
+	assert.Equal(t, "invalid fields in json: EOF\n", body)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
 }

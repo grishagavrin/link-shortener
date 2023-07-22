@@ -1,19 +1,16 @@
 package routes
 
 import (
-	"log"
-
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
+	"github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"go.uber.org/zap"
 )
 
-func ServiceRouter() chi.Router {
+func ServiceRouter(stor iStorage.Repository, l *zap.Logger) chi.Router {
 	r := chi.NewRouter()
-	h, err := handlers.New()
-	if err != nil {
-		log.Fatal("get instance db error")
-	}
+	h := handlers.New(stor, l)
 
 	r.Use(middlewares.GzipMiddleware)
 	r.Use(middlewares.CooksMiddleware)
@@ -23,5 +20,7 @@ func ServiceRouter() chi.Router {
 	r.Get("/api/user/urls", h.GetLinks)
 	r.Get("/ping", h.GetPing)
 	r.Post("/api/shorten/batch", h.SaveBatch)
+	r.Delete("/api/user/urls", h.DeleteBatch)
+
 	return r
 }

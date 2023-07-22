@@ -2,11 +2,11 @@ package middlewares
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/grishagavrin/link-shortener/internal/logger"
+	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
@@ -14,7 +14,8 @@ import (
 type ContextType string
 
 var CookieUserIDName = "userId"
-var CookieUserIDDefault = "default"
+
+// var CookieUserIDDefault = "all"
 
 // ContextType set context name for user id
 var UserIDCtxName ContextType = "ctxUserId"
@@ -30,9 +31,9 @@ func CooksMiddleware(next http.Handler) http.Handler {
 
 		// Generate hash from userId
 		encoded, err := utils.Encode(userID)
-		// logger.Info("UserID", zap.String("ID", userID))
+		logger.Info("UserID", zap.String("ID", userID))
 		// logger.Info("User encoded", zap.String("Encoded", encoded))
-		fmt.Println("COOKIE VAL:", encoded)
+		// fmt.Println("COOKIE VAL:", encoded)
 		if err == nil {
 			cookie := http.Cookie{
 				Name:     "userId",
@@ -46,4 +47,16 @@ func CooksMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserIDCtxName, userID)))
 	})
+}
+
+// GetContextUserID return uniq user id from session
+func GetContextUserID(req *http.Request) user.UniqUser {
+	userIDCtx := req.Context().Value(UserIDCtxName)
+	userID := "all"
+	if userIDCtx != nil {
+		// Convert interface type to user.UniqUser
+		userID = userIDCtx.(string)
+	}
+
+	return user.UniqUser(userID)
 }
