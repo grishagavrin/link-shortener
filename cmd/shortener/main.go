@@ -1,17 +1,19 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
-	"github.com/grishagavrin/link-shortener/internal/utils/db"
+	"github.com/grishagavrin/link-shortener/internal/storage"
 	"go.uber.org/zap"
 )
 
@@ -20,31 +22,32 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
+	// Logger instance
 	l, err := logger.Instance()
-	if err != nil {
-		log.Fatal(err)
+	if errors.Is(err, errs.ErrInitLogger) {
+		log.Fatal("fatal logger instance: ", zap.Error(err))
 	}
 
 	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		l.Fatal("fatal get config value: ", zap.Error(err))
+	}
+
+	// Storage instance
+	stor, dbi, err := storage.Instance(l)
 	if err != nil {
-		l.Fatal("app error exit", zap.Error(err))
+		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(),
+		Handler: routes.ServiceRouter(stor, l),
 	}
 
-	// l.Info("Start server address: " + srvAddr)
-	// err = srv.ListenAndServe()
-	// if err != nil {
-	// 	log.Fatalf("Could not start server: %v", err)
-	// }
-
 	go func() {
-		l.Fatal("app error exit", zap.Error(srv.ListenAndServe()))
+		l.Fatal("App error exit", zap.Error(srv.ListenAndServe()))
 	}()
-	l.Info("The service is ready to listen and serve.")
+	l.Info("The server is ready")
 
 	// Add context for Graceful shutdown
 	killSignal := <-interrupt
@@ -55,14 +58,9 @@ func main() {
 		l.Info("Got SIGTERM...")
 	}
 
-	// database close
-	conn, err := db.Instance()
-	if err == nil {
-		l.Info("Closing connect to db")
-		err := conn.Close(context.Background())
-		if err != nil {
-			l.Info("Closing don't close")
-		}
+	// Database close
+	if err == nil && dbi != nil {
+		l.Info("closing connect to db")
+		dbi.Close()
 	}
-	l.Info("Closing connect to db success")
 }

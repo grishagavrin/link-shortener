@@ -1,21 +1,12 @@
 package config
 
 import (
-	"errors"
 	"flag"
 	"log"
 
 	"github.com/caarlos0/env"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 )
-
-var errUnknownEnvOrFlag = errors.New("unknown env or flag param")
-
-type myConfig struct {
-	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:""`
-	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
-}
 
 const (
 	ServerAddress   = "ServerAddress"
@@ -25,6 +16,13 @@ const (
 	LENHASH         = 16
 )
 
+type myConfig struct {
+	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
+	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"filedata"`
+	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:"postgresql://postgres:220098@127.0.0.1:5432/golangDB"`
+}
+
 var instance *myConfig
 
 func Instance() *myConfig {
@@ -33,12 +31,13 @@ func Instance() *myConfig {
 		instance.initENV()
 		instance.initFlags()
 	}
+
 	return instance
 }
 
 func (c *myConfig) initENV() {
 	if err := env.Parse(c); err != nil {
-		log.Fatalf("can`t load ENV %+v\n", err)
+		log.Fatalf("Can`t load ENV %+v\n", err)
 	}
 }
 
@@ -75,5 +74,5 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 		return c.DatabaseDSN, nil
 	}
 
-	return "", errUnknownEnvOrFlag
+	return "", errs.ErrUnknownEnvOrFlag
 }

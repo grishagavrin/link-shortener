@@ -8,7 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
-	"github.com/grishagavrin/link-shortener/internal/storage"
+	"github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 )
 
 // encKey rand key
@@ -97,10 +97,10 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func RandStringBytes() (storage.URLKey, error) {
+func RandStringBytes() (iStorage.ShortURL, error) {
 	b, err := generateRandom(config.LENHASH / 2)
 	if err != nil {
 		return "", err
 	}
-	return storage.URLKey(hex.EncodeToString(b)), nil
+	return iStorage.ShortURL(hex.EncodeToString(b)), nil
 }
