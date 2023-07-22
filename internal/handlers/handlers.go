@@ -137,13 +137,14 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	}
 
 	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
-		return
+	status := http.StatusCreated
+
+	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+		status = http.StatusConflict
 	}
 
 	response := fmt.Sprintf("%s/%s", baseURL, urlKey)
-	res.WriteHeader(http.StatusCreated)
+	res.WriteHeader(status)
 	res.Write([]byte(response))
 }
 
@@ -173,10 +174,14 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		userID = userIDCtx.(string)
 	}
 	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
-		return
+	status := http.StatusCreated
+	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+		status = http.StatusConflict
 	}
+	// if err != nil {
+	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	resBody := struct {
 		Result string `json:"result"`
@@ -191,7 +196,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.Header().Set("content-type", "application/json")
-	res.WriteHeader(http.StatusCreated)
+	res.WriteHeader(status)
 	res.Write(js)
 }
 
