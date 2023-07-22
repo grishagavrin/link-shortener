@@ -131,6 +131,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
+
 	origin, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), iStorage.Origin(body))
 
 	status := http.StatusCreated
@@ -139,6 +140,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	}
 
 	response := fmt.Sprintf("%s/%s", baseURL, origin)
+
 	res.WriteHeader(status)
 	res.Write([]byte(response))
 }
@@ -171,13 +173,19 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+
 	userID := middlewares.GetContextUserID(req)
 
 	dbURL, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), iStorage.Origin(reqBody.URL))
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
+
 		status = http.StatusConflict
 	}
+	// if err != nil {
+	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	resBody := struct {
 		Result string `json:"result"`
