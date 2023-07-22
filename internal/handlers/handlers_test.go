@@ -12,6 +12,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
+	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,13 +48,15 @@ func TestShortenURL(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := routes.ServiceRouter(l)
+
+	stor, _, _ := storage.Instance(l)
+	r := routes.ServiceRouter(stor, l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	statusCode, body := testRequest(t, ts, "POSTJSON", "/api/shorten", `"url1":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
-	assert.Equal(t, "invalid fields in json\n", body)
+	assert.Equal(t, "invalid fields in json: json: unknown field \"url1\"\n", body)
 
 	statusCode, _ = testRequest(t, ts, "POSTJSON", "/api/shorten", `"url":"http://yandex.ru"`)
 	assert.Equal(t, http.StatusCreated, statusCode)
@@ -65,7 +68,9 @@ func TestWriteURL(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := routes.ServiceRouter(l)
+
+	stor, _, _ := storage.Instance(l)
+	r := routes.ServiceRouter(stor, l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -83,7 +88,9 @@ func TestGetURL(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := routes.ServiceRouter(l)
+
+	stor, _, _ := storage.Instance(l)
+	r := routes.ServiceRouter(stor, l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 

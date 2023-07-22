@@ -2,48 +2,46 @@ package ramstorage
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
-	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
 
-var errNotFoundURL = errors.New("url not found in DB")
-
 type RAMStorage struct {
 	MU sync.Mutex
-	DB map[user.UniqUser]storage.ShortLinks
+	DB map[user.UniqUser]iStorage.ShortLinks
 	l  *zap.Logger
 }
 
 func New(l *zap.Logger) (*RAMStorage, error) {
 	r := &RAMStorage{
-		DB: make(map[user.UniqUser]storage.ShortLinks),
+		DB: make(map[user.UniqUser]iStorage.ShortLinks),
 		l:  l,
 	}
 
 	if err := r.Load(); err != nil {
-		return r, err
+		return nil, fmt.Errorf("%w: %v", errs.ErrRamNotAvaliable, err)
 	}
 	return r, nil
 }
 
-func (r *RAMStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, error) {
+func (r *RAMStorage) LinksByUser(_ context.Context, userID user.UniqUser) (iStorage.ShortLinks, error) {
 	shorts, ok := r.DB[userID]
 	if !ok {
-		return shorts, errNotFoundURL
+		return shorts, errs.ErrNotFoundURL
 	}
 
 	return shorts, nil
 }
 
-func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (storage.ShortURL, error) {
+func (r *RAMStorage) SaveLinkDB(_ context.Context, userID user.UniqUser, url iStorage.Origin) (iStorage.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
@@ -53,8 +51,8 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (stora
 		return "", err
 	}
 
-	currentURLUser := storage.ShortLinks{}
-	currentURLAll := storage.ShortLinks{}
+	currentURLUser := iStorage.ShortLinks{}
+	currentURLAll := iStorage.ShortLinks{}
 
 	if urls, ok := r.DB[userID]; ok {
 		currentURLUser = urls
@@ -78,18 +76,18 @@ func (r *RAMStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (stora
 	return shortKey, nil
 }
 
-func (r *RAMStorage) GetLinkDB(key storage.ShortURL) (storage.Origin, error) {
+func (r *RAMStorage) GetLinkDB(_ context.Context, key iStorage.ShortURL) (iStorage.Origin, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 	shorts, ok := r.DB["all"]
 
 	if !ok {
-		return "", errNotFoundURL
+		return "", errs.ErrNotFoundURL
 	}
 
 	url, ok := shorts[key]
 	if !ok {
-		return "", errNotFoundURL
+		return "", errs.ErrNotFoundURL
 	}
 
 	return url, nil
@@ -110,21 +108,21 @@ func (r *RAMStorage) Load() error {
 }
 
 // Batch save
-func (r *RAMStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL) ([]storage.BatchResURL, error) {
+func (r *RAMStorage) SaveBatch(_ context.Context, userID user.UniqUser, urls []iStorage.BatchReqURL) ([]iStorage.BatchResURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
-	var shortsRes []storage.BatchResURL
+	var shortsRes []iStorage.BatchResURL
 
-	currentURLUser := storage.ShortLinks{}
-	currentURLAll := storage.ShortLinks{}
+	currentURLUser := iStorage.ShortLinks{}
+	currentURLAll := iStorage.ShortLinks{}
 
 	r.l.Sugar().Infof("userID: ", string(userID))
 
 	for _, url := range urls {
 		shortKey, _ := utils.RandStringBytes()
 
-		resItem := storage.BatchResURL{
+		resItem := iStorage.BatchResURL{
 			CorrID: url.CorrID,
 			Short:  string(shortKey),
 		}
@@ -133,14 +131,14 @@ func (r *RAMStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL)
 			currentURLUser = urls
 		}
 
-		currentURLUser[shortKey] = storage.Origin(url.Origin)
+		currentURLUser[shortKey] = iStorage.Origin(url.Origin)
 		r.DB[userID] = currentURLUser
 
 		if urls, ok := r.DB["all"]; ok {
 			currentURLAll = urls
 		}
 
-		currentURLAll[shortKey] = storage.Origin(url.Origin)
+		currentURLAll[shortKey] = iStorage.Origin(url.Origin)
 		r.DB["all"] = currentURLAll
 		shortsRes = append(shortsRes, resItem)
 	}
@@ -163,8 +161,8 @@ func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []
 	}
 
 	for _, v := range correlationIds {
-		delete(r.DB[user.UniqUser(userID)], storage.ShortURL(v))
-		delete(r.DB["all"], storage.ShortURL(v))
+		delete(r.DB[user.UniqUser(userID)], iStorage.ShortURL(v))
+		delete(r.DB["all"], iStorage.ShortURL(v))
 	}
 
 	return nil

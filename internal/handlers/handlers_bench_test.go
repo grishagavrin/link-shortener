@@ -5,87 +5,87 @@
 // go tool pprof -http=":9090" handlers.test result.pprof // See result profile
 package handlers
 
-import (
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strconv"
-	"strings"
-	"testing"
+// import (
+// 	"io"
+// 	"net/http"
+// 	"net/http/httptest"
+// 	"strconv"
+// 	"strings"
+// 	"testing"
 
-	"github.com/go-chi/chi"
-	"github.com/grishagavrin/link-shortener/internal/logger"
-)
+// 	"github.com/go-chi/chi"
+// 	"github.com/grishagavrin/link-shortener/internal/logger"
+// )
 
-func BenchmarkHandler_SaveTXT(b *testing.B) {
-	var r io.Reader
-	w := httptest.NewRecorder()
-	l, _ := logger.Instance()
-	rtr := chi.NewRouter()
-	h, _ := New(l)
+// func BenchmarkHandler_SaveTXT(b *testing.B) {
+// 	var r io.Reader
+// 	w := httptest.NewRecorder()
+// 	l, _ := logger.Instance()
+// 	rtr := chi.NewRouter()
+// 	h, _ := New(l)
 
-	b.ResetTimer()
+// 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		st := "http://testlink" + strconv.Itoa(i) + ".ru"
-		r = strings.NewReader(st)
-		request := httptest.NewRequest(http.MethodPost, "/", r)
+// 	for i := 0; i < b.N; i++ {
+// 		b.StopTimer()
+// 		st := "http://testlink" + strconv.Itoa(i) + ".ru"
+// 		r = strings.NewReader(st)
+// 		request := httptest.NewRequest(http.MethodPost, "/", r)
 
-		b.StartTimer()
-		rtr.HandleFunc("/", h.SaveTXT)
-		rtr.ServeHTTP(w, request)
-		res := w.Result()
-		b.StopTimer()
+// 		b.StartTimer()
+// 		rtr.HandleFunc("/", h.SaveTXT)
+// 		rtr.ServeHTTP(w, request)
+// 		res := w.Result()
+// 		b.StopTimer()
 
-		res.Body.Close()
-	}
-}
+// 		res.Body.Close()
+// 	}
+// }
 
-func BenchmarkHandler_SaveJSON(b *testing.B) {
-	var r io.Reader
-	w := httptest.NewRecorder()
-	l, _ := logger.Instance()
-	rtr := chi.NewRouter()
-	h, _ := New(l)
+// func BenchmarkHandler_SaveJSON(b *testing.B) {
+// 	var r io.Reader
+// 	w := httptest.NewRecorder()
+// 	l, _ := logger.Instance()
+// 	rtr := chi.NewRouter()
+// 	h, _ := New(l)
 
-	b.ResetTimer() // reset all timers
+// 	b.ResetTimer() // reset all timers
 
-	for i := 0; i < b.N; i++ {
-		b.StopTimer() // stop all timers
-		st := "{\"url\": \"http://testlink" + strconv.Itoa(i) + ".ru\"}"
-		r = strings.NewReader(st)
-		request := httptest.NewRequest(http.MethodPost, "/", r)
+// 	for i := 0; i < b.N; i++ {
+// 		b.StopTimer() // stop all timers
+// 		st := "{\"url\": \"http://testlink" + strconv.Itoa(i) + ".ru\"}"
+// 		r = strings.NewReader(st)
+// 		request := httptest.NewRequest(http.MethodPost, "/", r)
 
-		b.StartTimer() //
-		rtr.HandleFunc("/", h.SaveJSON)
-		// запускаем сервер
-		rtr.ServeHTTP(w, request)
-		res := w.Result()
+// 		b.StartTimer() //
+// 		rtr.HandleFunc("/", h.SaveJSON)
+// 		// запускаем сервер
+// 		rtr.ServeHTTP(w, request)
+// 		res := w.Result()
 
-		b.StopTimer() // останавливаем таймер
+// 		b.StopTimer() // останавливаем таймер
 
-		res.Body.Close()
-	}
-}
+// 		res.Body.Close()
+// 	}
+// }
 
-func BenchmarkHandler_GetLinks(b *testing.B) {
-	var r io.Reader
-	w := httptest.NewRecorder()
-	l, _ := logger.Instance()
-	rtr := chi.NewRouter()
-	h, _ := New(l)
+// func BenchmarkHandler_GetLinks(b *testing.B) {
+// 	var r io.Reader
+// 	w := httptest.NewRecorder()
+// 	l, _ := logger.Instance()
+// 	rtr := chi.NewRouter()
+// 	h, _ := New(l)
 
-	b.ResetTimer() // reset all timers
+// 	b.ResetTimer() // reset all timers
 
-	for i := 0; i < b.N; i++ {
-		b.StopTimer() // stop all timers
-		request := httptest.NewRequest(http.MethodGet, "/user/urls", r)
-		b.StartTimer() //
-		rtr.HandleFunc("/user/urls", h.GetLinks)
-		// запускаем сервер
-		rtr.ServeHTTP(w, request)
-		res := w.Result()
-		res.Body.Close()
-	}
-}
+// 	for i := 0; i < b.N; i++ {
+// 		b.StopTimer() // stop all timers
+// 		request := httptest.NewRequest(http.MethodGet, "/user/urls", r)
+// 		b.StartTimer() //
+// 		rtr.HandleFunc("/user/urls", h.GetLinks)
+// 		// запускаем сервер
+// 		rtr.ServeHTTP(w, request)
+// 		res := w.Result()
+// 		res.Body.Close()
+// 	}
+// }

@@ -4,15 +4,13 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
+	"github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"go.uber.org/zap"
 )
 
-func ServiceRouter(l *zap.Logger) chi.Router {
+func ServiceRouter(stor iStorage.Repository, l *zap.Logger) chi.Router {
 	r := chi.NewRouter()
-	h, err := handlers.New(l)
-	if err != nil {
-		l.Fatal("get instance ram/db error: ", zap.Error(err))
-	}
+	h := handlers.New(stor, l)
 
 	r.Use(middlewares.GzipMiddleware)
 	r.Use(middlewares.CooksMiddleware)

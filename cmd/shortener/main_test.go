@@ -11,6 +11,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
+	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +35,9 @@ func TestServerRun(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := routes.ServiceRouter(l)
+
+	stor, _, _ := storage.Instance(l)
+	r := routes.ServiceRouter(stor, l)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -45,6 +48,6 @@ func TestServerRun(t *testing.T) {
 	assert.Equal(t, http.StatusOK, statusCode)
 
 	statusCode, body = testRequest(t, ts, "POST", "/api/shorten", "")
-	assert.Equal(t, "invalid fields in json\n", body)
+	assert.Equal(t, "invalid fields in json: EOF\n", body)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
 }

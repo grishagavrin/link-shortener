@@ -13,7 +13,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
-	"github.com/grishagavrin/link-shortener/internal/utils/db"
+	"github.com/grishagavrin/link-shortener/internal/storage"
 	"go.uber.org/zap"
 )
 
@@ -22,25 +22,26 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
+	// Logger instance
 	l, err := logger.Instance()
-	if err != nil {
-		log.Fatal(err)
+	if errors.Is(err, errs.ErrInitLogger) {
+		log.Fatal("fatal logger instance: ", zap.Error(err))
 	}
 
 	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
-	if err != nil {
-		l.Fatal("Config instance error: ", zap.Error(err))
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		l.Fatal("fatal get config value: ", zap.Error(err))
 	}
 
-	//DB Instance
-	dbi, err := db.Instance(l)
-	if errors.Is(err, errs.ErrDatabaseNotAvaliable) {
-		l.Info("DB error", zap.Error(err))
+	// Storage instance
+	stor, dbi, err := storage.Instance(l)
+	if err != nil {
+		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(l),
+		Handler: routes.ServiceRouter(stor, l),
 	}
 
 	go func() {
@@ -58,10 +59,8 @@ func main() {
 	}
 
 	// Database close
-	if err == nil {
-		l.Info("Closing connect to db")
+	if err == nil && dbi != nil {
+		l.Info("closing connect to db")
 		dbi.Close()
 	}
-
-	l.Info("Closing connect to db success")
 }
