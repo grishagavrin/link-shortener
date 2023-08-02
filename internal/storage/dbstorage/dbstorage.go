@@ -3,13 +3,12 @@ package dbstorage
 import (
 	"context"
 	"errors"
-	"time"
+	"fmt"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
-	"github.com/grishagavrin/link-shortener/internal/storage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
-	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -23,9 +22,7 @@ type PostgreSQLStorage struct {
 	l   *zap.Logger
 }
 
-func New(l *zap.Logger) (*PostgreSQLStorage, error) {
-	// Init DB
-	dbi, _ := db.Instance(l)
+func New(dbi *pgxpool.Pool, l *zap.Logger) (*PostgreSQLStorage, error) {
 	// Check if scheme exist
 	sql := `
 	CREATE TABLE IF NOT EXISTS public.short_links(
@@ -37,12 +34,12 @@ func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 		is_deleted boolean default false
 	);
 
-	CREATE UNIQUE INDEX IF NOT EXISTS short_links_user_id_origin_uindex
-    on public.short_links (user_id, origin);
+	CREATE UNIQUE INDEX IF NOT EXISTS short_links_origin_uindex
+    on public.short_links(origin);
 	`
 
 	if _, err := dbi.Exec(context.Background(), sql); err != nil {
-		return &PostgreSQLStorage{}, err
+		return nil, fmt.Errorf("%w: %v", errs.ErrDatabaseExec, err)
 	}
 
 	return &PostgreSQLStorage{
@@ -51,12 +48,12 @@ func New(l *zap.Logger) (*PostgreSQLStorage, error) {
 	}, nil
 }
 
-func (s *PostgreSQLStorage) GetLinkDB(shortKey storage.ShortURL) (storage.Origin, error) {
-	var origin storage.Origin
+func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.ShortURL) (istorage.Origin, error) {
+	var origin istorage.Origin
 	var gone bool
 
 	query := "SELECT origin, is_deleted FROM public.short_links WHERE short=$1"
-	err := s.dbi.QueryRow(context.Background(), query, string(shortKey)).Scan(&origin, &gone)
+	err := s.dbi.QueryRow(ctx, query, string(shortKey)).Scan(&origin, &gone)
 
 	if gone {
 		return "", errs.ErrURLIsGone
@@ -69,21 +66,18 @@ func (s *PostgreSQLStorage) GetLinkDB(shortKey storage.ShortURL) (storage.Origin
 	return origin, nil
 }
 
-func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLinks, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
+func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID user.UniqUser) (istorage.ShortLinks, error) {
 	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
 
-	origins := storage.ShortLinks{}
+	origins := istorage.ShortLinks{}
 	rows, err := s.dbi.Query(ctx, query, string(userID))
 	if err != nil {
 		return origins, err
 	}
 
 	for rows.Next() {
-		var origin storage.Origin
-		var short storage.ShortURL
+		var origin istorage.Origin
+		var short istorage.ShortURL
 
 		err = rows.Scan(&short, &origin)
 		if err != nil {
@@ -96,9 +90,8 @@ func (s *PostgreSQLStorage) LinksByUser(userID user.UniqUser) (storage.ShortLink
 }
 
 // Save url
-func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin) (storage.ShortURL, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID user.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
+
 	shortKey, err := utils.RandStringBytes()
 	if err != nil {
 		return "", err
@@ -110,7 +103,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin)
 	`
 
 	queryGet := `
-	SELECT short FROM public.short_links where user_id=$1 and origin=$2
+	SELECT short FROM public.short_links where origin=$1
 	`
 
 	args := pgx.NamedArgs{
@@ -124,8 +117,9 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin)
 	if _, err := s.dbi.Exec(ctx, queryInsert, args); err != nil {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				var short storage.ShortURL
-				_ = s.dbi.QueryRow(ctx, queryGet, string(userID), url).Scan(&short)
+				var short istorage.ShortURL
+				_ = s.dbi.QueryRow(ctx, queryGet, string(url)).Scan(&short)
+
 				return short, errs.ErrAlreadyHasShort
 			}
 		}
@@ -136,7 +130,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(userID user.UniqUser, url storage.Origin)
 }
 
 // Save url batch
-func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.BatchReqURL) ([]storage.BatchResURL, error) {
+func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
 	type temp struct{ CorrID, Origin, Short string }
 
 	var buffer []temp
@@ -151,19 +145,20 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 		buffer = append(buffer, t)
 	}
 
-	var shorts []storage.BatchResURL
-	// Delete old records for tests
-	_, _ = s.dbi.Exec(context.Background(), "TRUNCATE TABLE public.short_links;")
+	var shorts []istorage.BatchResURL
+
+	// Delete old records
+	_, _ = s.dbi.Exec(ctx, "TRUNCATE TABLE public.short_links;")
 
 	query := `
-		INSERT INTO public.short_links (user_id, origin, short, correlation_id) 
-		VALUES (@user_id, @origin, @short, @correlation_id)
-		ON CONFLICT (user_id, origin) DO NOTHING;
+		INSERT INTO public.short_links (user_id, origin, short) 
+		VALUES (@user_id, @origin, @short)
+		ON CONFLICT (origin) DO NOTHING;
 		`
 
 	// Start transaction
-	tx, err := s.dbi.Begin(context.Background())
-	defer tx.Rollback(context.Background())
+	tx, err := s.dbi.Begin(ctx)
+	defer tx.Rollback(ctx)
 	if err != nil {
 		return shorts, err
 	}
@@ -177,8 +172,8 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 			"correlation_id": v.CorrID,
 		}
 
-		if _, err = tx.Exec(context.Background(), query, args); err == nil {
-			shorts = append(shorts, storage.BatchResURL{
+		if _, err = tx.Exec(ctx, query, args); err == nil {
+			shorts = append(shorts, istorage.BatchResURL{
 				Short:  v.Short,
 				CorrID: v.CorrID,
 			})
@@ -187,7 +182,7 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 		}
 	}
 
-	err = tx.Commit(context.Background())
+	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -195,35 +190,36 @@ func (s *PostgreSQLStorage) SaveBatch(userID user.UniqUser, urls []storage.Batch
 	return shorts, nil
 }
 
-func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
-	if len(correlationIds) == 0 {
+func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, shortIds []string, userID string) error {
+	if len(shortIds) == 0 {
 		return errs.ErrCorrelation
 	}
 
 	query := `
 	UPDATE public.short_links 
 	SET is_deleted=true 
-	WHERE user_id=@user_id AND short=ANY(@short);
+	WHERE user_id=$1 AND short=$2;
 	`
+	batch := &pgx.Batch{}
 
-	tx, _ := s.dbi.Begin(ctx)
-	defer tx.Rollback(ctx)
-	args := pgx.NamedArgs{
-		"user_id": userID,
-		"short":   correlationIds,
+	for _, id := range shortIds {
+		batch.Queue(query, userID, id)
 	}
 
-	_, err := tx.Exec(ctx, query, args)
-	if err != nil {
-		s.l.Info("Save bunch error", zap.Error(err))
-		return err
-	}
+	results := s.dbi.SendBatch(ctx, batch)
+	defer results.Close()
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		s.l.Info("TX commit error save bunch", zap.Error(err))
-		return err
-	}
+	for _, id := range shortIds {
+		_, err := results.Exec()
+		if err != nil {
+			var pgErr *pgconn.PgError
 
-	return nil
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				s.l.Sugar().Infof("update error on %s", id)
+				continue
+			}
+			return fmt.Errorf("unable to insert row: %w", err)
+		}
+	}
+	return results.Close()
 }

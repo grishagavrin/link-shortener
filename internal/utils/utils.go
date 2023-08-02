@@ -4,11 +4,10 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
-	"errors"
 	"math/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
-	"github.com/grishagavrin/link-shortener/internal/storage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 )
 
 // encKey rand key
@@ -19,8 +18,6 @@ type encData struct {
 
 // encInstance save encrypt data
 var encInstance *encData
-
-var errMathRand = errors.New("encode string error")
 
 // Decode userId  from encrypted cookie
 func Decode(shaUserID string, userID *string) error {
@@ -97,10 +94,10 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
-func RandStringBytes() (storage.ShortURL, error) {
+func RandStringBytes() (istorage.ShortURL, error) {
 	b, err := generateRandom(config.LENHASH / 2)
 	if err != nil {
 		return "", err
 	}
-	return storage.ShortURL(hex.EncodeToString(b)), nil
+	return istorage.ShortURL(hex.EncodeToString(b)), nil
 }
