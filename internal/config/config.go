@@ -2,7 +2,7 @@ package config
 
 import (
 	"flag"
-	"log"
+	"fmt"
 
 	"github.com/caarlos0/env"
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -25,20 +25,24 @@ type myConfig struct {
 
 var instance *myConfig
 
-func Instance() *myConfig {
+func Instance() (*myConfig, error) {
 	if instance == nil {
 		instance = new(myConfig)
-		instance.initENV()
+		err := instance.initENV()
+		if err != nil {
+			return nil, err
+		}
 		instance.initFlags()
 	}
 
-	return instance
+	return instance, nil
 }
 
-func (c *myConfig) initENV() {
+func (c *myConfig) initENV() error {
 	if err := env.Parse(c); err != nil {
-		log.Fatalf("Can`t load ENV %+v\n", err)
+		return fmt.Errorf("%w: %v", errs.ErrENVLoading, err)
 	}
+	return nil
 }
 
 func (c *myConfig) initFlags() {

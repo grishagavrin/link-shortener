@@ -18,7 +18,18 @@ var instance *pgxpool.Pool
 
 func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
-		dsn, _ := config.Instance().GetCfgValue(config.DatabaseDSN)
+		// Config instance
+		cfg, err := config.Instance()
+		if errors.Is(err, errs.ErrENVLoading) {
+			return nil, errs.ErrDatabaseNotAvaliable
+		}
+
+		//Config value
+		dsn, err := cfg.GetCfgValue(config.DatabaseDSN)
+		if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+			return nil, errs.ErrDatabaseNotAvaliable
+		}
+
 		if dsn == "" {
 			return nil, errs.ErrDatabaseNotAvaliable
 		}

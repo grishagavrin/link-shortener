@@ -34,7 +34,12 @@ func New(l *zap.Logger) (*RAMStorage, error) {
 
 // Load all links to map
 func (r *RAMStorage) Load() error {
-	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// Config instance
+	cfg, _ := config.Instance()
+	//Config value
+	fs, err := cfg.GetCfgValue(config.FileStoragePath)
+
 	// If file storage not exists
 	if err != nil || fs == "" {
 		return nil
@@ -109,7 +114,10 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID user.UniqUser, url ist
 
 	r.DB["all"] = currentURLAllRAM
 
-	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// Config instance
+	cfg, _ := config.Instance()
+	//Config value
+	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
 		return "", errs.ErrUnknownEnvOrFlag
 	}
@@ -178,7 +186,10 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID user.UniqUser, urls []i
 		shortsRes = append(shortsRes, resItem)
 	}
 
-	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// Config instance
+	cfg, _ := config.Instance()
+	//Config value
+	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
 		return nil, errs.ErrUnknownEnvOrFlag
 	}
@@ -188,11 +199,49 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID user.UniqUser, urls []i
 	return shortsRes, nil
 }
 
+// func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
+// 	r.MU.Lock()
+// 	defer r.MU.Unlock()
+
+// 	// Config instance
+// 	cfg, _ := config.Instance()
+// 	//Config value
+// 	fs, err := cfg.GetCfgValue(config.FileStoragePath)
+// 	if err != nil || fs == "" {
+// 		return errs.ErrUnknownEnvOrFlag
+// 	}
+
+// 	if len(correlationIds) == 0 {
+// 		return errs.ErrCorrelation
+// 	}
+
+// 	shortUser := r.DB[user.UniqUser(userID)]
+// 	shortAll := r.DB["all"]
+
+// 	for _, v := range correlationIds {
+// 		if su, ok := shortUser[istorage.ShortURL(v)]; ok {
+// 			su.IsDeleted = true
+// 			shortUser[istorage.ShortURL(v)] = su
+// 		}
+
+// 		if sa, ok := shortAll[istorage.ShortURL(v)]; ok {
+// 			sa.IsDeleted = true
+// 			shortAll[istorage.ShortURL(v)] = sa
+// 		}
+// 	}
+
+// 	_ = filewrapper.Write(fs, r.DB)
+// 	return nil
+// }
+
 func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
-	fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
+	// Config instance
+	cfg, _ := config.Instance()
+	//Config value
+	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
 		return errs.ErrUnknownEnvOrFlag
 	}

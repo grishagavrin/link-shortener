@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -13,7 +14,18 @@ var instance *pgxpool.Pool
 
 func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
-		dsn, _ := config.Instance().GetCfgValue(config.DatabaseDSN)
+		// Config instance
+		cfg, err := config.Instance()
+		if errors.Is(err, errs.ErrENVLoading) {
+			return nil, errs.ErrDatabaseNotAvaliable
+		}
+
+		//Config value
+		dsn, err := cfg.GetCfgValue(config.DatabaseDSN)
+		if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+			return nil, errs.ErrDatabaseNotAvaliable
+		}
+
 		if dsn == "" {
 			return instance, errs.ErrDatabaseNotAvaliable
 		}

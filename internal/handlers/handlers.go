@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
@@ -82,8 +81,16 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
-	if err != nil {
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -112,18 +119,27 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
-		http.Error(res, fmt.Errorf("%w: %v", errs.ErrUnknownEnvOrFlag, err).Error(), http.StatusInternalServerError)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	b, err := io.ReadAll(req.Body)
-	body := string(b)
 	if err != nil {
 		http.Error(res, fmt.Errorf("%w: %v", errs.ErrReadAll, err).Error(), http.StatusInternalServerError)
 		return
 	}
+
+	body := string(b)
 
 	if body == "" {
 		http.Error(res, errs.ErrEmptyBody.Error(), http.StatusBadRequest)
@@ -149,9 +165,17 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
-		http.Error(res, fmt.Errorf("%w: %v", errs.ErrUnknownEnvOrFlag, err).Error(), http.StatusInternalServerError)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -204,9 +228,11 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 
 	conn, err := storage.SQLDBConnection(h.l)
 	if err == nil {
-		if err := conn.Ping(ctx); err == nil {
-			res.WriteHeader(http.StatusOK)
+		err := conn.Ping(ctx)
+		if err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
 		}
+		res.WriteHeader(http.StatusOK)
 	} else {
 		h.l.Info("not connect to db", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
@@ -231,9 +257,18 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 
 	lks := make([]coupleLinks, 0, len(links))
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
+
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
-		http.Error(res, fmt.Errorf("%w: %v", errs.ErrUnknownEnvOrFlag, err).Error(), http.StatusInternalServerError)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -246,14 +281,14 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 
 	body, err := json.Marshal(lks)
-	if err == nil {
-		res.Header().Add("Content-Type", "application/json; charset=utf-8")
-		res.WriteHeader(http.StatusOK)
-		_, err = res.Write(body)
-		if err == nil {
-			return
-		}
+	if err != nil {
+		http.Error(res, errs.ErrJSONMarshall.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	res.Header().Add("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
+	res.Write(body)
 }
 
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
@@ -281,53 +316,10 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	inputCh := make(chan string)
-	go func() {
-		for _, id := range correlationIDs {
-			inputCh <- id
-		}
-		close(inputCh)
-	}()
-
-	out := fanIn(ctx, string(userID), inputCh)
-
-	var idS []string
-	for value := range out {
-		idS = append(idS, value)
-	}
-
-	err = h.s.BunchUpdateAsDeleted(ctx, idS, string(userID))
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	res.WriteHeader(http.StatusAccepted)
-}
 
-func fanIn(ctx context.Context, userID string, inputs ...<-chan string) <-chan string {
-	var wg sync.WaitGroup
-	out := make(chan string)
-
-	wg.Add(len(inputs))
-
-	for _, in := range inputs {
-		go func(ch <-chan string) {
-			for {
-				value, ok := <-ch
-
-				if !ok {
-					wg.Done()
-					break
-				}
-
-				out <- value
-			}
-		}(in)
+	err = h.s.BunchUpdateAsDeleted(ctx, correlationIDs, string(userID))
+	if err != nil {
+		h.l.Info("BunchUpdateAsDeleted error ", zap.Error(err))
 	}
-
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
-	return out
 }

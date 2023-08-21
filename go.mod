@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
 )

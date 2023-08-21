@@ -28,11 +28,18 @@ func main() {
 
 	// Logger instance
 	l, err := logger.Instance()
-	if errors.Is(err, errs.ErrInitLogger) {
-		log.Fatal("fatal logger instance: ", zap.Error(err))
+	if err != nil {
+		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
-	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
+	}
+
+	//Config value
+	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		l.Fatal("fatal get config value: ", zap.Error(err))
 	}

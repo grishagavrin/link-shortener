@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
+	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
@@ -147,9 +149,6 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser,
 
 	var shorts []istorage.BatchResURL
 
-	// Delete old records
-	_, _ = s.dbi.Exec(ctx, "TRUNCATE TABLE public.short_links;")
-
 	query := `
 		INSERT INTO public.short_links (user_id, origin, short) 
 		VALUES (@user_id, @origin, @short)
@@ -194,32 +193,94 @@ func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, shortIds [
 	if len(shortIds) == 0 {
 		return errs.ErrCorrelation
 	}
+	qtyCPU := runtime.NumCPU()
 
-	query := `
-	UPDATE public.short_links 
-	SET is_deleted=true 
-	WHERE user_id=$1 AND short=$2;
-	`
-	batch := &pgx.Batch{}
+	inputCh := make(chan string)
 
-	for _, id := range shortIds {
-		batch.Queue(query, userID, id)
-	}
-
-	results := s.dbi.SendBatch(ctx, batch)
-	defer results.Close()
-
-	for _, id := range shortIds {
-		_, err := results.Exec()
-		if err != nil {
-			var pgErr *pgconn.PgError
-
-			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-				s.l.Sugar().Infof("update error on %s", id)
-				continue
-			}
-			return fmt.Errorf("unable to insert row: %w", err)
+	go func() {
+		for _, v := range shortIds {
+			inputCh <- v
 		}
+		close(inputCh)
+	}()
+
+	// fanOut
+	chs := make([]chan string, 0, qtyCPU)
+	for i := 0; i < qtyCPU; i++ {
+		ch := make(chan string)
+		chs = append(chs, ch)
 	}
-	return results.Close()
+
+	go func() {
+		defer func(chs []chan string) {
+			for _, ch := range chs {
+				close(ch)
+			}
+		}(chs)
+
+		for i := 0; ; i++ {
+			if i == len(chs) {
+				i = 0
+			}
+
+			num, ok := <-inputCh
+			if !ok {
+				return
+			}
+			ch := chs[i]
+			ch <- num
+		}
+	}()
+
+	// worker
+	workerChs := make([]chan *pgx.Batch, 0, qtyCPU)
+	for _, fanOutCh := range chs {
+		workerCh := make(chan *pgx.Batch)
+		newWorker(ctx, fanOutCh, workerCh, userID)
+		workerChs = append(workerChs, workerCh)
+	}
+
+	// fanIn
+	wg := &sync.WaitGroup{}
+	for _, inputCh := range workerChs {
+		wg.Add(1)
+		go func(inputCh chan *pgx.Batch) {
+			defer wg.Done()
+			for batch := range inputCh {
+				results := s.dbi.SendBatch(ctx, batch)
+				_, err := results.Exec()
+				if err != nil {
+					var pgErr *pgconn.PgError
+					if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+						s.l.Info("update error on batch string")
+					}
+					s.l.Info("unable to insert batch row", zap.Error(err))
+				}
+				results.Close()
+			}
+		}(inputCh)
+	}
+
+	wg.Wait()
+
+	return nil
+}
+
+func newWorker(ctx context.Context, inputCh chan string, out chan *pgx.Batch, userID string) {
+	go func() {
+		query := `
+		UPDATE public.short_links 
+		SET is_deleted=true 
+		WHERE user_id=$1 AND short=$2;
+		`
+
+		batch := &pgx.Batch{}
+
+		for num := range inputCh {
+			batch.Queue(query, userID, num)
+		}
+
+		out <- batch
+		close(out)
+	}()
 }

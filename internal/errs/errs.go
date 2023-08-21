@@ -33,3 +33,7 @@ var ErrJSONUnMarshall = errors.New("cant unmarshall")    // Can`t unmarshall
 var ErrJSONMarshall = errors.New("cant marshall")        // Can`t marshall
 // ENV
 var ErrUnknownEnvOrFlag = errors.New("unknown env or flag param") //Unknown env of flag
+var ErrENVLoading = errors.New("can`t load ENV")                  // Can`t load ENV
+// Config
+var ErrConfigInstance = errors.New("get config instance error") // Config instance error
+var ErrConfigValue = errors.New("get config value error: ")     // Config value error
