@@ -16,6 +16,11 @@ type OriginRAM struct {
 }
 type ShortLinksRAM map[ShortURL]OriginRAM
 
+type BatchDelete struct {
+	UserID string
+	URLs   []string
+}
+
 type BatchReqURL struct {
 	CorrID string `json:"correlation_id"`
 	Origin string `json:"original_url"`
@@ -31,5 +36,5 @@ type Repository interface {
 	SaveLinkDB(context.Context, user.UniqUser, Origin) (ShortURL, error)
 	LinksByUser(context.Context, user.UniqUser) (ShortLinks, error)
 	SaveBatch(context.Context, user.UniqUser, []BatchReqURL) ([]BatchResURL, error)
-	BunchUpdateAsDeleted(context.Context, []string, string) error
+	BunchUpdateAsDeleted(chan BatchDelete)
 }

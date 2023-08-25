@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
-	"sync"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
@@ -20,11 +18,12 @@ import (
 
 // PostgreSQLStorage storage
 type PostgreSQLStorage struct {
-	dbi *pgxpool.Pool
-	l   *zap.Logger
+	dbi     *pgxpool.Pool
+	l       *zap.Logger
+	chBatch chan istorage.BatchDelete
 }
 
-func New(dbi *pgxpool.Pool, l *zap.Logger) (*PostgreSQLStorage, error) {
+func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan istorage.BatchDelete) (*PostgreSQLStorage, error) {
 	// Check if scheme exist
 	sql := `
 	CREATE TABLE IF NOT EXISTS public.short_links(
@@ -45,8 +44,9 @@ func New(dbi *pgxpool.Pool, l *zap.Logger) (*PostgreSQLStorage, error) {
 	}
 
 	return &PostgreSQLStorage{
-		dbi: dbi,
-		l:   l,
+		dbi:     dbi,
+		l:       l,
+		chBatch: ch,
 	}, nil
 }
 
@@ -189,98 +189,36 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser,
 	return shorts, nil
 }
 
-func (s *PostgreSQLStorage) BunchUpdateAsDeleted(ctx context.Context, shortIds []string, userID string) error {
-	if len(shortIds) == 0 {
-		return errs.ErrCorrelation
-	}
-	qtyCPU := runtime.NumCPU()
-
-	inputCh := make(chan string)
-
-	go func() {
-		for _, v := range shortIds {
-			inputCh <- v
+func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
+	for v := range chBatch {
+		if len(v.URLs) == 0 {
+			s.l.Info(errs.ErrCorrelation.Error())
 		}
-		close(inputCh)
-	}()
 
-	// fanOut
-	chs := make([]chan string, 0, qtyCPU)
-	for i := 0; i < qtyCPU; i++ {
-		ch := make(chan string)
-		chs = append(chs, ch)
-	}
-
-	go func() {
-		defer func(chs []chan string) {
-			for _, ch := range chs {
-				close(ch)
-			}
-		}(chs)
-
-		for i := 0; ; i++ {
-			if i == len(chs) {
-				i = 0
-			}
-
-			num, ok := <-inputCh
-			if !ok {
-				return
-			}
-			ch := chs[i]
-			ch <- num
-		}
-	}()
-
-	// worker
-	workerChs := make([]chan *pgx.Batch, 0, qtyCPU)
-	for _, fanOutCh := range chs {
-		workerCh := make(chan *pgx.Batch)
-		newWorker(ctx, fanOutCh, workerCh, userID)
-		workerChs = append(workerChs, workerCh)
-	}
-
-	// fanIn
-	wg := &sync.WaitGroup{}
-	for _, inputCh := range workerChs {
-		wg.Add(1)
-		go func(inputCh chan *pgx.Batch) {
-			defer wg.Done()
-			for batch := range inputCh {
-				results := s.dbi.SendBatch(ctx, batch)
-				_, err := results.Exec()
-				if err != nil {
-					var pgErr *pgconn.PgError
-					if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-						s.l.Info("update error on batch string")
-					}
-					s.l.Info("unable to insert batch row", zap.Error(err))
-				}
-				results.Close()
-			}
-		}(inputCh)
-	}
-
-	wg.Wait()
-
-	return nil
-}
-
-func newWorker(ctx context.Context, inputCh chan string, out chan *pgx.Batch, userID string) {
-	go func() {
 		query := `
-		UPDATE public.short_links 
-		SET is_deleted=true 
+		UPDATE public.short_links
+		SET is_deleted=true
 		WHERE user_id=$1 AND short=$2;
 		`
-
 		batch := &pgx.Batch{}
 
-		for num := range inputCh {
-			batch.Queue(query, userID, num)
+		for _, id := range v.URLs {
+			batch.Queue(query, v.UserID, id)
 		}
 
-		out <- batch
-		close(out)
-	}()
+		results := s.dbi.SendBatch(context.Background(), batch)
+
+		for _, id := range v.URLs {
+			_, err := results.Exec()
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+					s.l.Info("update error on batch delete", zap.String("URL id", id))
+					continue
+				}
+				s.l.Info("unable to delete row ", zap.Error(err))
+			}
+		}
+		results.Close()
+	}
 }

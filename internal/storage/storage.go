@@ -45,23 +45,42 @@ func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 	return instance, nil
 }
 
-func Instance(l *zap.Logger) (istorage.Repository, *pgxpool.Pool, error) {
+type InstanceStruct struct {
+	Repository istorage.Repository
+	SQLDB      *pgxpool.Pool
+}
+
+func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct, error) {
 	dbi, err := SQLDBConnection(l)
+	instanceDB := &InstanceStruct{}
+
 	if err == nil {
-		stor, err := dbstorage.New(dbi, l)
+		stor, err := dbstorage.New(dbi, l, chBatch)
 		if errors.Is(err, errs.ErrDatabaseNotAvaliable) || errors.Is(err, errs.ErrDatabaseExec) {
-			return nil, dbi, err
+			instanceDB.Repository = nil
+			instanceDB.SQLDB = dbi
+			return instanceDB, err
 		}
 
+		//Butch delete listener
+		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Connected to DB")
-		return stor, dbi, nil
+		instanceDB.Repository = stor
+		instanceDB.SQLDB = dbi
+		return instanceDB, nil
 	} else {
-		stor, err := ramstorage.New(l)
+		stor, err := ramstorage.New(l, chBatch)
 		if errors.Is(err, errs.ErrRAMNotAvaliable) {
-			return nil, nil, err
+			instanceDB.Repository = nil
+			instanceDB.SQLDB = nil
+			return instanceDB, err
 		}
 
+		//Butch delete listener
+		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Set RAM handler")
-		return stor, nil, nil
+		instanceDB.Repository = stor
+		instanceDB.SQLDB = nil
+		return instanceDB, nil
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"go.uber.org/zap"
 )
 
@@ -22,17 +23,17 @@ func main() {
 	//Seed install for math/rand
 	rand.Seed(time.Now().UnixNano())
 
-	// Context with cancel func
+	//Context with cancel func
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	// Logger instance
+	//Logger instance
 	l, err := logger.Instance()
 	if err != nil {
 		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
-	// Config instance
+	//Config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
 		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
@@ -44,15 +45,18 @@ func main() {
 		l.Fatal("fatal get config value: ", zap.Error(err))
 	}
 
-	// Storage instance
-	stor, dbi, err := storage.Instance(l)
+	//Batch channel for batch delete
+	chBatch := make(chan istorage.BatchDelete)
+
+	//Storage instance
+	stor, err := storage.Instance(l, chBatch)
 	if err != nil {
 		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(stor, l),
+		Handler: routes.ServiceRouter(stor.Repository, l, chBatch),
 	}
 
 	go func() {
@@ -60,7 +64,7 @@ func main() {
 	}()
 	l.Info("The server is ready")
 
-	// Add context for Graceful shutdown
+	//Add context for Graceful shutdown
 	killSignal := <-interrupt
 	switch killSignal {
 	case os.Interrupt:
@@ -69,9 +73,11 @@ func main() {
 		l.Info("Got SIGTERM...")
 	}
 
-	// Database close
-	if err == nil && dbi != nil {
+	close(chBatch)
+
+	//Database close
+	if err == nil && stor.SQLDB != nil {
 		l.Info("closing connect to db")
-		dbi.Close()
+		stor.SQLDB.Close()
 	}
 }

@@ -15,15 +15,17 @@ import (
 )
 
 type RAMStorage struct {
-	MU sync.Mutex
-	DB map[user.UniqUser]istorage.ShortLinksRAM
-	l  *zap.Logger
+	MU      sync.Mutex
+	DB      map[user.UniqUser]istorage.ShortLinksRAM
+	l       *zap.Logger
+	chBatch chan istorage.BatchDelete
 }
 
-func New(l *zap.Logger) (*RAMStorage, error) {
+func New(l *zap.Logger, ch chan istorage.BatchDelete) (*RAMStorage, error) {
 	r := &RAMStorage{
-		DB: make(map[user.UniqUser]istorage.ShortLinksRAM),
-		l:  l,
+		DB:      make(map[user.UniqUser]istorage.ShortLinksRAM),
+		l:       l,
+		chBatch: ch,
 	}
 
 	if err := r.Load(); err != nil {
@@ -199,72 +201,37 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID user.UniqUser, urls []i
 	return shortsRes, nil
 }
 
-// func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
-// 	r.MU.Lock()
-// 	defer r.MU.Unlock()
+func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
+	for v := range chBatch {
+		r.MU.Lock()
 
-// 	// Config instance
-// 	cfg, _ := config.Instance()
-// 	//Config value
-// 	fs, err := cfg.GetCfgValue(config.FileStoragePath)
-// 	if err != nil || fs == "" {
-// 		return errs.ErrUnknownEnvOrFlag
-// 	}
-
-// 	if len(correlationIds) == 0 {
-// 		return errs.ErrCorrelation
-// 	}
-
-// 	shortUser := r.DB[user.UniqUser(userID)]
-// 	shortAll := r.DB["all"]
-
-// 	for _, v := range correlationIds {
-// 		if su, ok := shortUser[istorage.ShortURL(v)]; ok {
-// 			su.IsDeleted = true
-// 			shortUser[istorage.ShortURL(v)] = su
-// 		}
-
-// 		if sa, ok := shortAll[istorage.ShortURL(v)]; ok {
-// 			sa.IsDeleted = true
-// 			shortAll[istorage.ShortURL(v)] = sa
-// 		}
-// 	}
-
-// 	_ = filewrapper.Write(fs, r.DB)
-// 	return nil
-// }
-
-func (r *RAMStorage) BunchUpdateAsDeleted(ctx context.Context, correlationIds []string, userID string) error {
-	r.MU.Lock()
-	defer r.MU.Unlock()
-
-	// Config instance
-	cfg, _ := config.Instance()
-	//Config value
-	fs, err := cfg.GetCfgValue(config.FileStoragePath)
-	if err != nil || fs == "" {
-		return errs.ErrUnknownEnvOrFlag
-	}
-
-	if len(correlationIds) == 0 {
-		return errs.ErrCorrelation
-	}
-
-	shortUser := r.DB[user.UniqUser(userID)]
-	shortAll := r.DB["all"]
-
-	for _, v := range correlationIds {
-		if su, ok := shortUser[istorage.ShortURL(v)]; ok {
-			su.IsDeleted = true
-			shortUser[istorage.ShortURL(v)] = su
+		// Config instance
+		cfg, _ := config.Instance()
+		//Config value
+		fs, err := cfg.GetCfgValue(config.FileStoragePath)
+		if err != nil || fs == "" {
+			r.l.Info(errs.ErrUnknownEnvOrFlag.Error())
 		}
 
-		if sa, ok := shortAll[istorage.ShortURL(v)]; ok {
-			sa.IsDeleted = true
-			shortAll[istorage.ShortURL(v)] = sa
+		if len(v.URLs) == 0 {
+			r.l.Info(errs.ErrCorrelation.Error())
 		}
-	}
 
-	_ = filewrapper.Write(fs, r.DB)
-	return nil
+		shortUser := r.DB[user.UniqUser(v.UserID)]
+		shortAll := r.DB["all"]
+
+		for _, v := range v.URLs {
+			if su, ok := shortUser[istorage.ShortURL(v)]; ok {
+				su.IsDeleted = true
+				shortUser[istorage.ShortURL(v)] = su
+			}
+
+			if sa, ok := shortAll[istorage.ShortURL(v)]; ok {
+				sa.IsDeleted = true
+				shortAll[istorage.ShortURL(v)] = sa
+			}
+		}
+		_ = filewrapper.Write(fs, r.DB)
+		r.MU.Unlock()
+	}
 }

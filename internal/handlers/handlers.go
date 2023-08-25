@@ -231,6 +231,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 		err := conn.Ping(ctx)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		res.WriteHeader(http.StatusOK)
 	} else {
@@ -291,6 +292,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	res.Write(body)
 }
 
+/*
 func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
@@ -323,3 +325,4 @@ func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
 		h.l.Info("BunchUpdateAsDeleted error ", zap.Error(err))
 	}
 }
+*/

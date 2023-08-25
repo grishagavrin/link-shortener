@@ -12,22 +12,25 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
 func TestGetLinkHandler(t *testing.T) {
+	chBatch := make(chan istorage.BatchDelete)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
-	stor, _, _ := storage.Instance(l)
+	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(stor, l)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
+	defer close(chBatch)
 
 	// определяем структуру теста
 	type want struct {
@@ -95,15 +98,17 @@ func TestGetLinkHandler(t *testing.T) {
 }
 
 func TestSaveTXTHandler(t *testing.T) {
+	chBatch := make(chan istorage.BatchDelete)
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
-	stor, _, _ := storage.Instance(l)
+	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(stor, l)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
+	defer close(chBatch)
 
 	// определяем структуру теста
 	type want struct {
@@ -178,15 +183,17 @@ func TestSaveTXTHandler(t *testing.T) {
 }
 
 func TestSaveJSONHandler(t *testing.T) {
+	chBatch := make(chan istorage.BatchDelete)
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
-	stor, _, _ := storage.Instance(l)
+	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(stor, l)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
+	defer close(chBatch)
 
 	// определяем структуру теста
 	type want struct {
