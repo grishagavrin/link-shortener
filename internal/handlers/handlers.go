@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,151 +11,180 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	"github.com/grishagavrin/link-shortener/internal/storage/dbstorage"
-	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"github.com/grishagavrin/link-shortener/internal/user"
-	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
-	s storage.Repository
+	s istorage.Repository
+	l *zap.Logger
 }
 
-var errEmptyBody = errors.New("body is empty")
-var errFieldsJSON = errors.New("invalid fields in json")
-var errInternalSrv = errors.New("internal error on server")
-var errCorrectURL = fmt.Errorf("enter correct url parameter")
-var errNoContent = errors.New("no content")
-var errBadRequest = errors.New("bad request")
-
-var myCook string = "default"
-
-func New() (*Handler, error) {
-	_, err := db.Instance()
-	if err == nil {
-		logger.Info("Set db handler")
-		s, err := dbstorage.New()
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
-		}
-		return &Handler{
-			s: s,
-		}, nil
-	} else {
-		r, err := ramstorage.New()
-		if err != nil {
-			return nil, err
-		}
-		return &Handler{s: r}, nil
-	}
+func New(stor istorage.Repository, l *zap.Logger) *Handler {
+	return &Handler{s: stor, l: l}
 }
 
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
 	q := chi.URLParam(req, "id")
+
 	if len(q) != config.LENHASH {
-		http.Error(res, errCorrectURL.Error(), http.StatusBadRequest)
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
 		return
 	}
 
-	foundedURL, err := h.s.GetLinkDB(user.UniqUser("all"), storage.URLKey(q))
-	if err == nil {
-		http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
+	h.l.Info("Get ID:", zap.String("id", q))
+	foundedURL, err := h.s.GetLinkDB(ctx, istorage.ShortURL(q))
+
+	if err != nil {
+		if errors.Is(err, errs.ErrURLIsGone) {
+			h.l.Info(errs.ErrURLIsGone.Error(), zap.Error(err))
+			http.Error(res, errs.ErrURLIsGone.Error(), http.StatusGone)
+			return
+		}
+
+		h.l.Info(errs.ErrBadRequest.Error(), zap.Error(err))
+		http.Error(res, errs.ErrBadRequest.Error(), http.StatusBadRequest)
 		return
-	} else {
-		logger.Info("Get error", zap.Error(err))
 	}
-	http.Error(res, err.Error(), http.StatusBadRequest)
+
+	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
 
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		setBadResponse(res, errInternalSrv)
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrReadAll, err).Error(), http.StatusBadRequest)
 		return
 	}
-	var urls []storage.BatchURL
+
+	// Get url from json data
+	var urls []istorage.BatchReqURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
-		setBadResponse(res, errCorrectURL)
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrJSONUnMarshall, err).Error(), http.StatusBadRequest)
 		return
 	}
 
-	shorts, err := h.s.SaveBatch(urls)
+	shorts, err := h.s.SaveBatch(ctx, middlewares.GetContextUserID(req), urls)
 	if err != nil {
-		setBadResponse(res, errInternalSrv)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Println(shorts)
 
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
-	if err != nil {
-		setBadResponse(res, errBadRequest)
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Prepare results
 	for k := range shorts {
 		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
 	}
+
 	body, err = json.Marshal(shorts)
-	if err == nil {
-		// Prepare response
-		res.Header().Add("Content-Type", "application/json; charset=utf-8")
-		res.WriteHeader(http.StatusCreated)
-		_, err = res.Write(body)
-		if err == nil {
-			return
-		}
-	}
-
-	setBadResponse(res, errInternalSrv)
-}
-
-func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
-	}
-
-	b, _ := io.ReadAll(req.Body)
-	body := string(b)
-
-	if body == "" {
-		http.Error(res, errEmptyBody.Error(), http.StatusBadRequest)
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrJSONMarshall, err).Error(), http.StatusBadRequest)
 		return
 	}
 
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	userID := "default"
-	if userIDCtx != nil {
-		// Convert interface type to user.UniqUser
-		userID = userIDCtx.(string)
+	res.Header().Add("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusCreated)
+	_, err = res.Write(body)
+	if err != nil {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
 	}
 
-	urlKey, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(body))
-	status := http.StatusCreated
+}
 
-	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrReadAll, err).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body := string(b)
+
+	if body == "" {
+		http.Error(res, errs.ErrEmptyBody.Error(), http.StatusBadRequest)
+		return
+	}
+
+	userID := middlewares.GetContextUserID(req)
+
+	origin, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), istorage.Origin(body))
+
+	status := http.StatusCreated
+	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
 
-	response := fmt.Sprintf("%s/%s", baseURL, urlKey)
+	response := fmt.Sprintf("%s/%s", baseURL, origin)
+	res.Header().Set("content-type", "text/plain; charset=utf-8")
 	res.WriteHeader(status)
 	res.Write([]byte(response))
 }
 
 func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
-	baseURL, err := config.Instance().GetCfgValue(config.BaseURL)
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	body, _ := io.ReadAll(req.Body)
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrReadAll, err).Error(), http.StatusInternalServerError)
+		return
+	}
+
 	reqBody := struct {
 		URL string `json:"url"`
 	}{}
@@ -163,25 +193,17 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	decJSON.DisallowUnknownFields()
 
 	if err := decJSON.Decode(&reqBody); err != nil {
-		http.Error(res, errFieldsJSON.Error(), http.StatusBadRequest)
+		http.Error(res, fmt.Errorf("%w: %v", errs.ErrFieldsJSON, err).Error(), http.StatusBadRequest)
 		return
 	}
 
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	userID := "default"
-	if userIDCtx != nil {
-		// Convert interface type to user.UniqUser
-		userID = userIDCtx.(string)
-	}
-	dbURL, err := h.s.SaveLinkDB(user.UniqUser(userID), storage.ShortURL(reqBody.URL))
+	userID := middlewares.GetContextUserID(req)
+
+	dbURL, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), istorage.Origin(reqBody.URL))
 	status := http.StatusCreated
-	if errors.Is(err, dbstorage.ErrAlreadyHasShort) {
+	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
 	}
-	// if err != nil {
-	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 
 	resBody := struct {
 		Result string `json:"result"`
@@ -191,7 +213,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 	js, err := json.Marshal(resBody)
 	if err != nil {
-		http.Error(res, errInternalSrv.Error(), http.StatusInternalServerError)
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -201,25 +223,32 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
-	conn, err := db.Instance()
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	conn, err := storage.SQLDBConnection(h.l)
 	if err == nil {
-		if err := conn.Ping(req.Context()); err == nil {
-			res.WriteHeader(http.StatusOK)
+		err := conn.Ping(ctx)
+		if err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
+			return
 		}
+		res.WriteHeader(http.StatusOK)
 	} else {
-		logger.Info("not connect to db", zap.Error(err))
+		h.l.Info("not connect to db", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	userIDCtx := req.Context().Value(middlewares.UserIDCtxName)
-	// Convert interface type to user.UniqUser
-	userID := userIDCtx.(string)
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
 
-	links, err := h.s.LinksByUser(user.UniqUser(userID))
+	userID := middlewares.GetContextUserID(req)
+
+	links, err := h.s.LinksByUser(ctx, user.UniqUser(userID))
 	if err != nil {
-		http.Error(res, errNoContent.Error(), http.StatusNoContent)
+		http.Error(res, errs.ErrNoContent.Error(), http.StatusNoContent)
 		return
 	}
 
@@ -227,8 +256,22 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 		Short  string `json:"short_url"`
 		Origin string `json:"original_url"`
 	}
-	var lks []coupleLinks
-	baseURL, _ := config.Instance().GetCfgValue(config.BaseURL)
+
+	lks := make([]coupleLinks, 0, len(links))
+
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//Config value
+	baseURL, err := cfg.GetCfgValue(config.BaseURL)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Get all links
 	for k, v := range links {
@@ -239,18 +282,47 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 
 	body, err := json.Marshal(lks)
-	if err == nil {
-		// Prepare response
-		res.Header().Add("Content-Type", "application/json; charset=utf-8")
-		res.WriteHeader(http.StatusOK)
-		_, err = res.Write(body)
-		if err == nil {
-			return
-		}
+	if err != nil {
+		http.Error(res, errs.ErrJSONMarshall.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	res.Header().Add("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
+	res.Write(body)
 }
 
-// setBadRequest set bad response
-func setBadResponse(w http.ResponseWriter, e error) {
-	http.Error(w, e.Error(), http.StatusBadRequest)
+/*
+func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	var correlationIDs []string
+	userID := middlewares.GetContextUserID(req)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &correlationIDs)
+	if err != nil {
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate count
+	if len(correlationIDs) == 0 {
+		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res.WriteHeader(http.StatusAccepted)
+
+	err = h.s.BunchUpdateAsDeleted(ctx, correlationIDs, string(userID))
+	if err != nil {
+		h.l.Info("BunchUpdateAsDeleted error ", zap.Error(err))
+	}
 }
+*/
