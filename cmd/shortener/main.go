@@ -1,52 +1,70 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
+	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
-	"github.com/grishagavrin/link-shortener/internal/utils/db"
+	"github.com/grishagavrin/link-shortener/internal/storage"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"go.uber.org/zap"
 )
 
 func main() {
-	// Context with cancel func
+	//Seed install for math/rand
+	rand.Seed(time.Now().UnixNano())
+
+	//Context with cancel func
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
+	//Logger instance
 	l, err := logger.Instance()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
-	srvAddr, err := config.Instance().GetCfgValue(config.ServerAddress)
+	//Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
+	}
+
+	//Config value
+	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		l.Fatal("fatal get config value: ", zap.Error(err))
+	}
+
+	//Batch channel for batch delete
+	chBatch := make(chan istorage.BatchDelete)
+
+	//Storage instance
+	stor, err := storage.Instance(l, chBatch)
 	if err != nil {
-		l.Fatal("app error exit", zap.Error(err))
+		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
 	srv := &http.Server{
 		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(),
+		Handler: routes.ServiceRouter(stor.Repository, l, chBatch),
 	}
 
-	// l.Info("Start server address: " + srvAddr)
-	// err = srv.ListenAndServe()
-	// if err != nil {
-	// 	log.Fatalf("Could not start server: %v", err)
-	// }
-
 	go func() {
-		l.Fatal("app error exit", zap.Error(srv.ListenAndServe()))
+		l.Fatal("App error exit", zap.Error(srv.ListenAndServe()))
 	}()
-	l.Info("The service is ready to listen and serve.")
+	l.Info("The server is ready")
 
-	// Add context for Graceful shutdown
+	//Add context for Graceful shutdown
 	killSignal := <-interrupt
 	switch killSignal {
 	case os.Interrupt:
@@ -55,14 +73,11 @@ func main() {
 		l.Info("Got SIGTERM...")
 	}
 
-	// database close
-	conn, err := db.Instance()
-	if err == nil {
-		l.Info("Closing connect to db")
-		err := conn.Close(context.Background())
-		if err != nil {
-			l.Info("Closing don't close")
-		}
+	close(chBatch)
+
+	//Database close
+	if err == nil && stor.SQLDB != nil {
+		l.Info("closing connect to db")
+		stor.SQLDB.Close()
 	}
-	l.Info("Closing connect to db success")
 }

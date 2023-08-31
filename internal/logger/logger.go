@@ -3,6 +3,8 @@ package logger
 import (
 	"time"
 
+	"github.com/grishagavrin/link-shortener/internal/errs"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -16,10 +18,13 @@ func Instance() (*zap.Logger, error) {
 		instance = new(zap.Logger)
 		logger, err := newLogger("info")
 		if err != nil {
-			return logger, err
+			// return nil, fmt.Errorf("%w: %v", errs.ErrInitLogger, err)
+			err = errors.Wrap(err, errs.ErrInitLogger.Error())
+			return nil, err
 		}
 		instance = logger
 	}
+
 	return instance, nil
 }
 
@@ -32,7 +37,8 @@ func newLogger(level string) (*zap.Logger, error) {
 	// Log level
 	atom := zap.NewAtomicLevel()
 	if err := atom.UnmarshalText([]byte(level)); err != nil {
-		return nil, err
+		// return nil, fmt.Errorf("%w: %v", errs.ErrJSONUnMarshall, err)
+		return nil, errors.Wrap(err, errs.ErrJSONUnMarshall.Error())
 	}
 	cfg.Level = atom
 	// Output set
