@@ -35,3 +35,7 @@ show pprof
 show difference
 
     go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
+
+go fmt before commit in root dir
+
+    go fmt ./...
