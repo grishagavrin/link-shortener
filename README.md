@@ -21,3 +21,17 @@ in root directory
 in internal/config DatabaseDSN change envDefault
 
     postgresql://postgres:***@127.0.0.1:5432/golangDB
+
+# bench tests
+
+in internal/handlers/bench
+
+    go test -bench=. -benchmem -benchtime=10000x -memprofile base.pprof
+
+show pprof
+
+    go tool pprof -http=":9090" bench.test base.pprof
+
+show difference
+
+    go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
