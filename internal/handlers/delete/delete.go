@@ -1,3 +1,4 @@
+// Package delete implement handler for delete links for route /api/user/urls
 package delete
 
 import (

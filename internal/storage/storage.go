@@ -62,7 +62,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 			return instanceDB, err
 		}
 
-		//Butch delete listener
+		// Butch delete listener for SQL database
 		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Connected to DB")
 		instanceDB.Repository = stor
@@ -76,7 +76,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 			return instanceDB, err
 		}
 
-		//Butch delete listener
+		// Butch delete listener for RAM database
 		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Set RAM handler")
 		instanceDB.Repository = stor

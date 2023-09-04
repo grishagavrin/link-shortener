@@ -1,3 +1,4 @@
+// Package middlewares consist methods for parse http request
 package middlewares
 
 import (

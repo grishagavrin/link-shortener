@@ -1,11 +1,11 @@
+// Package istorage implements Repository pattern
 package istorage
 
 import (
 	"context"
-
-	"github.com/grishagavrin/link-shortener/internal/user"
 )
 
+type UniqUser string
 type ShortURL string
 type Origin string
 type ShortLinks map[ShortURL]Origin
@@ -33,8 +33,8 @@ type BatchResURL struct {
 
 type Repository interface {
 	GetLinkDB(context.Context, ShortURL) (Origin, error)
-	SaveLinkDB(context.Context, user.UniqUser, Origin) (ShortURL, error)
-	LinksByUser(context.Context, user.UniqUser) (ShortLinks, error)
-	SaveBatch(context.Context, user.UniqUser, []BatchReqURL) ([]BatchResURL, error)
+	SaveLinkDB(context.Context, UniqUser, Origin) (ShortURL, error)
+	LinksByUser(context.Context, UniqUser) (ShortLinks, error)
+	SaveBatch(context.Context, UniqUser, []BatchReqURL) ([]BatchResURL, error)
 	BunchUpdateAsDeleted(chan BatchDelete)
 }

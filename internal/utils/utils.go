@@ -1,3 +1,4 @@
+// Package utils consist function for work with encrypted/decrepted functions
 package utils
 
 import (

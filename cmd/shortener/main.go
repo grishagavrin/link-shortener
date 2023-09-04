@@ -1,3 +1,4 @@
+// Main package for initial initialization of the application
 package main
 
 import (
@@ -21,35 +22,35 @@ import (
 )
 
 func main() {
-	//Seed install for math/rand
+	// Seed install for math/rand
 	rand.Seed(time.Now().UnixNano())
 
-	//Context with cancel func
+	// Context with cancel func
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	//Logger instance
+	// Logger instance
 	l, err := logger.Instance()
 	if err != nil {
 		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
-	//Config instance
+	// Config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
 		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
 	}
 
-	//Config value
+	// Get server address
 	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		l.Fatal("fatal get config value: ", zap.Error(err))
 	}
 
-	//Batch channel for batch delete
+	// Batch channel for batch delete
 	chBatch := make(chan istorage.BatchDelete)
 
-	//Storage instance
+	// Storage instance allocate logger and batch channel
 	stor, err := storage.Instance(l, chBatch)
 	if err != nil {
 		l.Fatal("fatal storage init", zap.Error(err))
@@ -65,7 +66,7 @@ func main() {
 	}()
 	l.Info("The server is ready")
 
-	//Add context for Graceful shutdown
+	// Add context for Graceful shutdown
 	killSignal := <-interrupt
 	switch killSignal {
 	case os.Interrupt:
@@ -76,7 +77,7 @@ func main() {
 
 	close(chBatch)
 
-	//Database close
+	// Database close
 	if err == nil && stor.SQLDB != nil {
 		l.Info("closing connect to db")
 		stor.SQLDB.Close()

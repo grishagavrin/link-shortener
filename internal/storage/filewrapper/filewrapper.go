@@ -1,3 +1,4 @@
+// Package filewrapper wrap working with file storage
 package filewrapper
 
 import (

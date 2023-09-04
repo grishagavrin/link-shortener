@@ -1,3 +1,4 @@
+// Package handlers includes general handlers for service shortener
 package handlers
 
 import (

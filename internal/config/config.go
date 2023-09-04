@@ -1,3 +1,4 @@
+// Pacakge config implement functions for env and project configs
 package config
 
 import (

@@ -1,3 +1,4 @@
+// Package dbstorage contains methods for postgreSQL storage work
 package dbstorage
 
 import (
@@ -7,7 +8,6 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
-	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -68,7 +68,7 @@ func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.Sho
 	return origin, nil
 }
 
-func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID user.UniqUser) (istorage.ShortLinks, error) {
+func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID istorage.UniqUser) (istorage.ShortLinks, error) {
 	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
 
 	origins := istorage.ShortLinks{}
@@ -92,7 +92,7 @@ func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID user.UniqUse
 }
 
 // Save url
-func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID user.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
+func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID istorage.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
 
 	shortKey, err := utils.RandStringBytes()
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID user.UniqUser
 }
 
 // Save url batch
-func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
+func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
 	type temp struct{ CorrID, Origin, Short string }
 
 	var buffer []temp
