@@ -1,3 +1,4 @@
+// Package db consist function for work with database connection objects
 package db
 
 import (
@@ -12,6 +13,7 @@ import (
 
 var instance *pgxpool.Pool
 
+// Instance connection instance
 func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
 		// Config instance

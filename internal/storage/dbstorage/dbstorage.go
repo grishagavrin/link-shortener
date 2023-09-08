@@ -1,3 +1,4 @@
+// Package dbstorage contains methods for postgreSQL storage work
 package dbstorage
 
 import (
@@ -7,7 +8,6 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
-	"github.com/grishagavrin/link-shortener/internal/user"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +23,7 @@ type PostgreSQLStorage struct {
 	chBatch chan istorage.BatchDelete
 }
 
+// New initialize new table in postgreSQL storage
 func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan istorage.BatchDelete) (*PostgreSQLStorage, error) {
 	// Check if scheme exist
 	sql := `
@@ -50,6 +51,7 @@ func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan istorage.BatchDelete) (*Postg
 	}, nil
 }
 
+// GetLinkDB get data from storage by short URL
 func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.ShortURL) (istorage.Origin, error) {
 	var origin istorage.Origin
 	var gone bool
@@ -68,7 +70,8 @@ func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.Sho
 	return origin, nil
 }
 
-func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID user.UniqUser) (istorage.ShortLinks, error) {
+// LinksByUser return all user links
+func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID istorage.UniqUser) (istorage.ShortLinks, error) {
 	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
 
 	origins := istorage.ShortLinks{}
@@ -91,8 +94,8 @@ func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID user.UniqUse
 	return origins, nil
 }
 
-// Save url
-func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID user.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
+// SaveLinkDB save url in storage of short links
+func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID istorage.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
 
 	shortKey, err := utils.RandStringBytes()
 	if err != nil {
@@ -131,8 +134,8 @@ func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID user.UniqUser
 	return shortKey, nil
 }
 
-// Save url batch
-func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
+// SaveBatch save multiply URL
+func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
 	type temp struct{ CorrID, Origin, Short string }
 
 	var buffer []temp
@@ -189,6 +192,7 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID user.UniqUser,
 	return shorts, nil
 }
 
+// BunchUpdateAsDeleted delete mass URL by fanIN pattern
 func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
 	for v := range chBatch {
 		if len(v.URLs) == 0 {

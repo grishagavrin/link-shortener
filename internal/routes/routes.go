@@ -1,3 +1,4 @@
+// Package routes contains general routes for service link-shortener
 package routes
 
 import (
@@ -9,13 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// ServiceRouter define routes in server
 func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorage.BatchDelete) chi.Router {
 	r := chi.NewRouter()
 	h := handlers.New(stor, l)
 
+	// Middlewares
 	r.Use(middlewares.GzipMiddleware)
 	r.Use(middlewares.CooksMiddleware)
-
+	// Handlers
 	r.Get("/{id}", h.GetLink)
 	r.Post("/", h.SaveTXT)
 	r.Post("/api/shorten", h.SaveJSON)

@@ -1,3 +1,4 @@
+// Pacakge config implement functions for env and project configs
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/errs"
 )
 
+// Config consts for param config func
 const (
 	ServerAddress   = "ServerAddress"
 	BaseURL         = "BaseURL"
@@ -16,6 +18,7 @@ const (
 	LENHASH         = 16
 )
 
+// Config base struct with default initialize
 type myConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
@@ -23,8 +26,10 @@ type myConfig struct {
 	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 }
 
+// Instance variable of config
 var instance *myConfig
 
+// First instance in main func
 func Instance() (*myConfig, error) {
 	if instance == nil {
 		instance = new(myConfig)
@@ -38,6 +43,7 @@ func Instance() (*myConfig, error) {
 	return instance, nil
 }
 
+// Parse env
 func (c *myConfig) initENV() error {
 	if err := env.Parse(c); err != nil {
 		return fmt.Errorf("%w: %v", errs.ErrENVLoading, err)
@@ -45,6 +51,7 @@ func (c *myConfig) initENV() error {
 	return nil
 }
 
+// Flag initialize for start app
 func (c *myConfig) initFlags() {
 	aFlag := flag.String("a", "", "")
 	bFlag := flag.String("b", "", "")
@@ -66,6 +73,7 @@ func (c *myConfig) initFlags() {
 	}
 }
 
+// Get param config
 func (c *myConfig) GetCfgValue(env string) (string, error) {
 	switch env {
 	case ServerAddress:

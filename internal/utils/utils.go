@@ -1,3 +1,4 @@
+// Package utils consist function for work with encrypted/decrepted functions
 package utils
 
 import (
@@ -94,6 +95,7 @@ func generateRandom(size int) ([]byte, error) {
 	return b, nil
 }
 
+// RandStringBytes generate random short ulr with 8 lenght
 func RandStringBytes() (istorage.ShortURL, error) {
 	b, err := generateRandom(config.LENHASH / 2)
 	if err != nil {

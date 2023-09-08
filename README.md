@@ -39,3 +39,15 @@ show difference
 go fmt before commit in root dir
 
     go fmt ./...
+
+# get godoc
+
+in root dir
+
+    godoc -http=:9090 and tap in browser http://localhost:9090/pkg/?m=all
+
+# generate swagger
+
+in root dir
+
+    swag init -g .\cmd\shortener\main.go
