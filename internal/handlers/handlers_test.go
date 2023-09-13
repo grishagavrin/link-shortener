@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestGetLinkHandler(t *testing.T) {
+func TestHandler_GetLink(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
@@ -97,8 +97,9 @@ func TestGetLinkHandler(t *testing.T) {
 	}
 }
 
-func TestSaveTXTHandler(t *testing.T) {
+func TestHandler_SaveTXT(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
+	defer close(chBatch)
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
@@ -108,7 +109,6 @@ func TestSaveTXTHandler(t *testing.T) {
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
-	defer close(chBatch)
 
 	// определяем структуру теста
 	type want struct {
@@ -182,7 +182,7 @@ func TestSaveTXTHandler(t *testing.T) {
 	}
 }
 
-func TestSaveJSONHandler(t *testing.T) {
+func TestHandler_SaveJSON(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
 	// создаем логер
 	l, _ := logger.Instance()

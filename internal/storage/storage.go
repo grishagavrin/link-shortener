@@ -16,15 +16,16 @@ import (
 
 var instance *pgxpool.Pool
 
+// SQLDBConnection create pgx pool connection
 func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
-		// Config instance
+		// config instance
 		cfg, err := config.Instance()
 		if errors.Is(err, errs.ErrENVLoading) {
 			return nil, errs.ErrDatabaseNotAvaliable
 		}
 
-		//Config value
+		// dsn config value
 		dsn, err := cfg.GetCfgValue(config.DatabaseDSN)
 		if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 			return nil, errs.ErrDatabaseNotAvaliable
@@ -45,11 +46,13 @@ func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 	return instance, nil
 }
 
+// InstanceStruct instance struct for repository & pgpool connection
 type InstanceStruct struct {
 	Repository istorage.Repository
 	SQLDB      *pgxpool.Pool
 }
 
+// Instance initialize storage with channel for batch delete
 func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct, error) {
 	dbi, err := SQLDBConnection(l)
 	instanceDB := &InstanceStruct{}
@@ -62,7 +65,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 			return instanceDB, err
 		}
 
-		//Butch delete listener
+		// Butch delete listener for SQL database
 		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Connected to DB")
 		instanceDB.Repository = stor
@@ -76,7 +79,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 			return instanceDB, err
 		}
 
-		//Butch delete listener
+		// Butch delete listener for RAM database
 		go stor.BunchUpdateAsDeleted(chBatch)
 		l.Info("Set RAM handler")
 		instanceDB.Repository = stor

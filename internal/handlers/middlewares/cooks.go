@@ -6,20 +6,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grishagavrin/link-shortener/internal/logger"
-	"github.com/grishagavrin/link-shortener/internal/user"
+	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
 
+// Context type
 type ContextType string
 
+// Default cookie value
 var CookieUserIDName = "userId"
-
-// var CookieUserIDDefault = "all"
 
 // ContextType set context name for user id
 var UserIDCtxName ContextType = "ctxUserId"
 
+// CooksMiddleware checks and set user token
 func CooksMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := uuid.New().String()
@@ -50,7 +51,7 @@ func CooksMiddleware(next http.Handler) http.Handler {
 }
 
 // GetContextUserID return uniq user id from session
-func GetContextUserID(req *http.Request) user.UniqUser {
+func GetContextUserID(req *http.Request) istorage.UniqUser {
 	userIDCtx := req.Context().Value(UserIDCtxName)
 	userID := "all"
 	if userIDCtx != nil {
@@ -58,5 +59,5 @@ func GetContextUserID(req *http.Request) user.UniqUser {
 		userID = userIDCtx.(string)
 	}
 
-	return user.UniqUser(userID)
+	return istorage.UniqUser(userID)
 }

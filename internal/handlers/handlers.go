@@ -1,3 +1,4 @@
+// Package handlers includes general handlers for service shortener
 package handlers
 
 import (
@@ -15,19 +16,28 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
-	"github.com/grishagavrin/link-shortener/internal/user"
 	"go.uber.org/zap"
 )
 
+// Handler general type fo handler
 type Handler struct {
 	s istorage.Repository
 	l *zap.Logger
 }
 
+// New allocation new handler
 func New(stor istorage.Repository, l *zap.Logger) *Handler {
 	return &Handler{s: stor, l: l}
 }
 
+// GetLink godoc
+// @Tags GetLink
+// @Summary Request to get the original link
+// @Param id path string true "2dace3f162eb9f0d"
+// @Failure 400 {string} string "bad request"
+// @Success 200 {string} string
+// @Router /{id} [get]
+// GetLink get original link
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
@@ -57,6 +67,13 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, string(foundedURL), http.StatusTemporaryRedirect)
 }
 
+// SaveBatch godoc
+// @Tags SaveBatch
+// @Summary Request to save data and return multiply
+// @Failure 400 {string} string "bad request"
+// @Success 200 {object} object
+// @Router /api/shorten/batch [post]
+// SaveBatch save data and return multiply
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
@@ -67,7 +84,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Get url from json data
+	// get url from json data
 	var urls []istorage.BatchReqURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
@@ -81,21 +98,21 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Config instance
+	// config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	//Config value
+	// config value
 	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Prepare results
+	// prepare results
 	for k := range shorts {
 		shorts[k].Short = fmt.Sprintf("%s/%s", baseURL, shorts[k].Short)
 	}
@@ -115,6 +132,13 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 
 }
 
+// SaveTXT godoc
+// @Tags SaveTXT
+// @Summary Convert link to shorting and store in database
+// @Failure 400 {string} string "bad request"
+// @Success 200 {string} string
+// @Router / [post]
+// SaveTXT convert link to shorting and store in database
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
@@ -148,7 +172,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	origin, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), istorage.Origin(body))
+	origin, err := h.s.SaveLinkDB(ctx, istorage.UniqUser(userID), istorage.Origin(body))
 
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
@@ -161,18 +185,25 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(response))
 }
 
+// SaveJSON godoc
+// @Tags SaveJSON
+// @Summary Convert link to shorting and store in database
+// @Failure 400 {string} string "bad request"
+// @Success 200 {object} object
+// @Router /api/shorten [post]
+// SaveJSON convert link to shorting and store in database
 func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
-	// Config instance
+	// config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	//Config value
+	// config value
 	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
@@ -199,7 +230,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	dbURL, err := h.s.SaveLinkDB(ctx, user.UniqUser(userID), istorage.Origin(reqBody.URL))
+	dbURL, err := h.s.SaveLinkDB(ctx, istorage.UniqUser(userID), istorage.Origin(reqBody.URL))
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
@@ -222,6 +253,13 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	res.Write(js)
 }
 
+// GetPing godoc
+// @Tags GetPing
+// @Summary Implement ping connection for sql database storage
+// @Failure 500 {string} string "internal error"
+// @Success 200 {string} string
+// @Router /ping [get]
+// GetPing implement ping connection for sql database storage
 func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
@@ -240,13 +278,20 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetLinks godoc
+// @Tags GetLinks
+// @Summary Get all urls by user
+// @Failure 500 {string} string "internal error"
+// @Success 200 {object} object
+// @Router /api/user/urls [get]
+// GetLinks get all urls by user
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
 	userID := middlewares.GetContextUserID(req)
 
-	links, err := h.s.LinksByUser(ctx, user.UniqUser(userID))
+	links, err := h.s.LinksByUser(ctx, istorage.UniqUser(userID))
 	if err != nil {
 		http.Error(res, errs.ErrNoContent.Error(), http.StatusNoContent)
 		return
@@ -259,21 +304,21 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 
 	lks := make([]coupleLinks, 0, len(links))
 
-	// Config instance
+	// config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	//Config value
+	// config value
 	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Get all links
+	// get all links
 	for k, v := range links {
 		lks = append(lks, coupleLinks{
 			Short:  fmt.Sprintf("%s/%s", baseURL, string(k)),
@@ -291,38 +336,3 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 	res.Write(body)
 }
-
-/*
-func (h *Handler) DeleteBatch(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
-	defer cancel()
-
-	var correlationIDs []string
-	userID := middlewares.GetContextUserID(req)
-
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = json.Unmarshal(body, &correlationIDs)
-	if err != nil {
-		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Validate count
-	if len(correlationIDs) == 0 {
-		http.Error(res, errs.ErrCorrectURL.Error(), http.StatusBadRequest)
-		return
-	}
-
-	res.WriteHeader(http.StatusAccepted)
-
-	err = h.s.BunchUpdateAsDeleted(ctx, correlationIDs, string(userID))
-	if err != nil {
-		h.l.Info("BunchUpdateAsDeleted error ", zap.Error(err))
-	}
-}
-*/

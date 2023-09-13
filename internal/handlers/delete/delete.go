@@ -1,3 +1,4 @@
+// Package delete implement handler for delete links for route /api/user/urls
 package delete
 
 import (
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Handler struct for delete batch
 type Handler struct {
 	l       *zap.Logger
 	chBatch chan istorage.BatchDelete
@@ -24,6 +26,13 @@ func New(l *zap.Logger, chBatch chan istorage.BatchDelete) *Handler {
 	}
 }
 
+// DeleteBatch godoc
+// @Tags DeleteBatch
+// @Summary Delete handler with fan in channel
+// @Failure 500 {string} string "internal error"
+// @Success 200 {array} array
+// @Router /api/user/urls [delete]
+// Delete handler with fan in channel
 func (h Handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	var correlationIDs []string
 	userID := middlewares.GetContextUserID(req)
