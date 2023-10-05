@@ -4,18 +4,18 @@ package myanalyzer
 
 import (
 	"go/ast"
-	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 )
 
+// osexitanalyzer
 var OsExitAnalyzer = &analysis.Analyzer{
 	Name: "osexitanalyzer",
 	Doc:  "Don't allow os.Exit in main package",
 	Run:  run,
 }
-var errorType = types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
 
+// run analyzer
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(node ast.Node) bool {
