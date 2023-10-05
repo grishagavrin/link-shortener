@@ -1,3 +1,4 @@
+// Package storage implement db connection
 package storage
 
 import (

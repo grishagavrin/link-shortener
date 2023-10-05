@@ -22,7 +22,7 @@ func ExampleHandler_SaveTXT() {
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
 	r := routes.ServiceRouter(stor.Repository, l, chBatch)
-	//handlers
+	// handlers
 	h := handlers.New(stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)
@@ -47,7 +47,7 @@ func ExampleHandler_SaveJSON() {
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
 	r := routes.ServiceRouter(stor.Repository, l, chBatch)
-	//handlers
+	// handlers
 	h := handlers.New(stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)
@@ -72,7 +72,7 @@ func ExampleHandler_GetLink() {
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
 	r := routes.ServiceRouter(stor.Repository, l, chBatch)
-	//handlers
+	// handlers
 	h := handlers.New(stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)

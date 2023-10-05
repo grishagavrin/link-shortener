@@ -69,7 +69,7 @@ func TestHandler_GetLink(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// создаем запрос
 			req, _ := http.NewRequest(http.MethodGet, ts.URL+tt.queryString, nil)
-			//делаем запрос
+			// делаем запрос
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
 				l.Fatal("TestGetLinkHandler", zap.Error(err))
@@ -150,7 +150,7 @@ func TestHandler_SaveTXT(t *testing.T) {
 			w := httptest.NewRecorder()
 			// создаем запрос
 			req, _ := http.NewRequest(http.MethodPost, ts.URL+tt.queryString, bytes.NewBufferString(tt.requestBody))
-			//делаем запрос
+			// делаем запрос
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
 				l.Fatal("TestSaveTXTHandler", zap.Error(err))
@@ -240,7 +240,7 @@ func TestHandler_SaveJSON(t *testing.T) {
 			var jsonData = []byte(fmt.Sprintf("{%v}", tt.requestBody))
 			// создаем запрос
 			req, _ := http.NewRequest(http.MethodPost, ts.URL+tt.queryString, bytes.NewBuffer(jsonData))
-			//делаем запрос
+			// делаем запрос
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
 				l.Fatal("TestSaveJSONHandler", zap.Error(err))
