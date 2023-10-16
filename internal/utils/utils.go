@@ -5,7 +5,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
-	"math/rand"
+
+	"crypto/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"

@@ -1,4 +1,4 @@
-// Package errors consist package level errors
+// Package errs consist package level errors
 package errs
 
 import (

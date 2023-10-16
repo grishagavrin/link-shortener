@@ -22,7 +22,7 @@ func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
 			return nil, errs.ErrDatabaseNotAvaliable
 		}
 
-		//Config value
+		// Config value
 		dsn, err := cfg.GetCfgValue(config.DatabaseDSN)
 		if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 			return nil, errs.ErrDatabaseNotAvaliable

@@ -3,6 +3,7 @@ package ramstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -41,11 +42,11 @@ func (r *RAMStorage) Load() error {
 	// fs, err := config.Instance().GetCfgValue(config.FileStoragePath)
 	// Config instance
 	cfg, _ := config.Instance()
-	//Config value
+	// Config value
 	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 
 	// If file storage not exists
-	if err != nil || fs == "" {
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		return nil
 	}
 
@@ -122,7 +123,7 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 
 	// Config instance
 	cfg, _ := config.Instance()
-	//Config value
+	// Config value
 	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
 		return "", errs.ErrUnknownEnvOrFlag
@@ -195,7 +196,7 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID istorage.UniqUser, urls
 
 	// Config instance
 	cfg, _ := config.Instance()
-	//Config value
+	// Config value
 	fs, err := cfg.GetCfgValue(config.FileStoragePath)
 	if err != nil || fs == "" {
 		return nil, errs.ErrUnknownEnvOrFlag
@@ -213,7 +214,7 @@ func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
 
 		// Config instance
 		cfg, _ := config.Instance()
-		//Config value
+		// Config value
 		fs, err := cfg.GetCfgValue(config.FileStoragePath)
 		if err != nil || fs == "" {
 			r.l.Info(errs.ErrUnknownEnvOrFlag.Error())

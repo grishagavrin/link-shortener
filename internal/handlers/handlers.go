@@ -150,7 +150,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//Config value
+	// Config value
 	baseURL, err := cfg.GetCfgValue(config.BaseURL)
 	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
@@ -223,7 +223,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 	decJSON := json.NewDecoder(strings.NewReader(string(body)))
 	decJSON.DisallowUnknownFields()
 
-	if err := decJSON.Decode(&reqBody); err != nil {
+	if err = decJSON.Decode(&reqBody); err != nil {
 		http.Error(res, fmt.Errorf("%w: %v", errs.ErrFieldsJSON, err).Error(), http.StatusBadRequest)
 		return
 	}
@@ -266,7 +266,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 
 	conn, err := storage.SQLDBConnection(h.l)
 	if err == nil {
-		err := conn.Ping(ctx)
+		err = conn.Ping(ctx)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return

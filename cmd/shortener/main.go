@@ -4,13 +4,11 @@ package main
 import (
 	"errors"
 	"log"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -31,9 +29,6 @@ import (
 // @Host 127.0.0.1:8080
 
 func main() {
-	// Seed install for math/rand
-	rand.Seed(time.Now().UnixNano())
-
 	// Context with cancel func
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
