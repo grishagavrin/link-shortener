@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -75,8 +74,7 @@ func (c *MyConfig) initJSON() {
 	fmt.Println(path)
 
 	// Read path to config file
-	byteValue, err := ioutil.ReadFile(path)
-
+	byteValue, err := os.ReadFile(path)
 	// If we os.Open returns an error then handle it
 	if err != nil {
 		// Nothing to do
