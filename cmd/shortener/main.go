@@ -82,7 +82,7 @@ func main() {
 			err := srv.ListenAndServe()
 			if err != nil {
 				l.Info("app error exit", zap.Error(err))
-				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+
 			}
 		}()
 	} else {
@@ -104,7 +104,6 @@ func main() {
 			err := srv.ListenAndServeTLS("server.crt", "server.key")
 			if err != nil {
 				l.Info("app error exit", zap.Error(err))
-				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 			}
 		}()
 

@@ -2,8 +2,13 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
 
 	"github.com/caarlos0/env"
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -17,7 +22,17 @@ const (
 	DatabaseDSN     = "DatabaseDSN"
 	EnableHTTPS     = "EnableHTTPS"
 	LENHASH         = 16
+	Config          = "CONFIG"
 )
+
+// JSONConfig for json config
+type JSONConfig struct {
+	BaseURL         string `json:"base_url"`
+	ServerAddress   string `json:"server_address"`
+	FileStoragePath string `json:"file_storage_path"`
+	DatabaseDsn     string `json:"database_dsn"`
+	EnableHTTPS     bool   `json:"enable_https"`
+}
 
 // Config base struct with default initialize
 type MyConfig struct {
@@ -26,6 +41,7 @@ type MyConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"../../filedata"`
 	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 	EnableHTTPS     string `env:"ENABLE_HTTPS" envDefault:""`
+	Config          string `env:"CONFIG" envDefault:""`
 }
 
 // Instance variable of config
@@ -40,9 +56,59 @@ func Instance() (*MyConfig, error) {
 			return nil, err
 		}
 		instance.initFlags()
+		instance.initJSON()
 	}
 
 	return instance, nil
+}
+
+// Parse JSON
+func (c *MyConfig) initJSON() {
+	// Init from json evn config
+	if c.Config == "" {
+		return
+	}
+
+	// Get path directory of service
+	pwd, _ := os.Getwd()
+	path := pwd + "/" + c.Config
+	fmt.Println(path)
+
+	// Read path to config file
+	byteValue, err := ioutil.ReadFile(path)
+
+	// If we os.Open returns an error then handle it
+	if err != nil {
+		// Nothing to do
+		return
+	}
+
+	//initialize JSON config file
+	var config JSONConfig
+
+	// jsonFile's content into 'config' which we defined above
+	err = json.Unmarshal(byteValue, &config)
+	if err != nil {
+		return
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = config.BaseURL
+	}
+	if c.ServerAddress == "" {
+		c.ServerAddress = config.ServerAddress
+	}
+	if c.FileStoragePath == "" {
+		if _, err := os.Stat(config.FileStoragePath); !errors.Is(err, os.ErrNotExist) {
+			c.FileStoragePath = config.FileStoragePath
+		}
+	}
+	if c.DatabaseDSN == "" {
+		c.DatabaseDSN = config.DatabaseDsn
+	}
+	if c.EnableHTTPS == "" {
+		c.EnableHTTPS = strconv.FormatBool(config.EnableHTTPS)
+	}
+
 }
 
 // Parse env
@@ -60,6 +126,7 @@ func (c *MyConfig) initFlags() {
 	fFlag := flag.String("f", "", "")
 	dFlag := flag.String("d", "", "")
 	sFlag := flag.String("s", "", "")
+	cFlag := flag.String("c", "", "")
 	flag.Parse()
 
 	if *aFlag != "" {
@@ -77,6 +144,9 @@ func (c *MyConfig) initFlags() {
 	if *sFlag != "" {
 		c.EnableHTTPS = *sFlag
 	}
+	if *cFlag != "" {
+		c.Config = *cFlag
+	}
 }
 
 // Get param config
@@ -92,6 +162,8 @@ func (c *MyConfig) GetCfgValue(env string) (string, error) {
 		return c.DatabaseDSN, nil
 	case EnableHTTPS:
 		return c.EnableHTTPS, nil
+	case Config:
+		return c.Config, nil
 	}
 
 	return "", errs.ErrUnknownEnvOrFlag
