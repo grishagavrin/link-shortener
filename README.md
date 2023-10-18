@@ -1,3 +1,9 @@
+# run HTTPS
+
+in cmd/shortener
+
+    go run main.go -s 'ssl'
+
 # run macOS
 
 in cmd/shortener
