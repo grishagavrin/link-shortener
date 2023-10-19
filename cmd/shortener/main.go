@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -41,8 +42,6 @@ func main() {
 	// Print build info
 	printBuildInfo()
 	// Context with cancel func
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	// Logger instance
 	l, err := logger.Instance()
@@ -62,6 +61,15 @@ func main() {
 		l.Fatal("fatal get config value: ", zap.Error(err))
 	}
 
+	// Init context
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer cancel()
+
 	// Batch channel for batch delete
 	chBatch := make(chan istorage.BatchDelete)
 
@@ -70,64 +78,100 @@ func main() {
 	if err != nil {
 		l.Fatal("fatal storage init", zap.Error(err))
 	}
+
+	// Routing app
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+
 	// HTTP server
 	if cfg.EnableHTTPS == "" {
-		srv := &http.Server{
-			Addr:    srvAddr,
-			Handler: routes.ServiceRouter(stor.Repository, l, chBatch),
-		}
-
-		go func() {
-			l.Info("Start HTTP server")
-			err := srv.ListenAndServe()
-			if err != nil {
-				l.Info("app error exit", zap.Error(err))
-
-			}
-		}()
+		// Start func for HTTP server
+		srv := startHTTPServer(srvAddr, r, l)
+		releaseResources(ctx, l, stor, chBatch, srv)
 	} else {
-		// HTTPS server
-		manager := &autocert.Manager{
-			Cache:      autocert.DirCache("cache-dir"),
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(srvAddr),
-		}
-
-		srv := &http.Server{
-			Addr:      ":443",
-			Handler:   routes.ServiceRouter(stor.Repository, l, chBatch),
-			TLSConfig: manager.TLSConfig(),
-		}
-
-		go func() {
-			l.Info("Start HTTPS server")
-			err := srv.ListenAndServeTLS("server.crt", "server.key")
-			if err != nil {
-				l.Info("app error exit", zap.Error(err))
-			}
-		}()
-
-	}
-
-	// Add context for Graceful shutdown
-	killSignal := <-interrupt
-	switch killSignal {
-	case os.Interrupt:
-		l.Info("Got SIGINT...")
-	case syscall.SIGTERM:
-		l.Info("Got SIGTERM...")
-	}
-
-	close(chBatch)
-
-	// Database close
-	if err == nil && stor.SQLDB != nil {
-		l.Info("closing connect to db")
-		stor.SQLDB.Close()
+		// Start func for HTTPS server
+		srv := startHTTPSServer(srvAddr, r, l)
+		releaseResources(ctx, l, stor, chBatch, srv)
 	}
 }
 
-// printBuildInfo print info about package
+// Release of resources app
+func releaseResources(ctx context.Context,
+	l *zap.Logger,
+	stor *storage.InstanceStruct,
+	chBatch chan istorage.BatchDelete,
+	srv *http.Server,
+) {
+	<-ctx.Done()
+	if ctx.Err() != nil {
+		fmt.Printf("Error:%v\n", ctx.Err())
+	}
+
+	l.Info("The service is shutting down...")
+	if stor.SQLDB != nil {
+		l.Info("closing connect to db")
+		stor.SQLDB.Close()
+	}
+
+	// Close channel of batch delete
+	close(chBatch)
+
+	// Shutdown server
+	if err := srv.Shutdown(ctx); err != nil {
+		l.Info("app error exit", zap.Error(err))
+	}
+}
+
+// Start HTTP server func
+func startHTTPServer(
+	srvAddr string,
+	h http.Handler,
+	l *zap.Logger,
+) *http.Server {
+	srv := &http.Server{
+		Addr:    srvAddr,
+		Handler: h,
+	}
+	go func() {
+		l.Info("Start HTTP server")
+		err := srv.ListenAndServe()
+		if err != nil {
+			l.Info("app error exit", zap.Error(err))
+		}
+	}()
+
+	return srv
+}
+
+// Start HTTPS server func
+func startHTTPSServer(
+	srvAddr string,
+	h http.Handler,
+	l *zap.Logger,
+) *http.Server {
+	manager := &autocert.Manager{
+		Cache:      autocert.DirCache("cache-dir"),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(srvAddr),
+	}
+
+	srv := &http.Server{
+		Addr:      ":443",
+		Handler:   h,
+		TLSConfig: manager.TLSConfig(),
+	}
+
+	go func() {
+		l.Info("Start HTTPS server")
+		err := srv.ListenAndServeTLS("server.crt", "server.key")
+		if err != nil {
+			l.Info("app error exit", zap.Error(err))
+		}
+	}()
+
+	return srv
+}
+
+// Print build info print info about package
 func printBuildInfo() {
 	if buildVersion == "" {
 		buildVersion = "N/A"

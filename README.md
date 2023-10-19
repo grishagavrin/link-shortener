@@ -8,7 +8,7 @@ in cmd/shortener
 
 in cmd/shortener
 
-    nodemon --watch ../../ --exec go run main.go --signal SIGTERM
+    nodemon --watch ./ --exec go run ./cmd/shortener/main.go --signal SIGTERM
 
 # run wnd
 

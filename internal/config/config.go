@@ -81,7 +81,7 @@ func (c *MyConfig) initJSON() {
 		return
 	}
 
-	//initialize JSON config file
+	// initialize JSON config file
 	var config JSONConfig
 
 	// jsonFile's content into 'config' which we defined above

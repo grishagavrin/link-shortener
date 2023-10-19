@@ -5,7 +5,7 @@
 // - OsExitAnalyzer to check os.Exit calls in main packages
 //
 // How to run:
-//
+// go build main.go
 // ./cmd/staticlint/main ./...
 
 package main
