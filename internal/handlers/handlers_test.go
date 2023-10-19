@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,8 +20,6 @@ import (
 func TestHandler_GetLink(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-	// создаем контекст
-	ctx := context.Background()
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -30,7 +27,7 @@ func TestHandler_GetLink(t *testing.T) {
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -103,14 +100,12 @@ func TestHandler_GetLink(t *testing.T) {
 func TestHandler_SaveTXT(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-	// создаем контекст
-	ctx := context.Background()
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -189,14 +184,12 @@ func TestHandler_SaveTXT(t *testing.T) {
 
 func TestHandler_SaveJSON(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
-	// создаем контекст
-	ctx := context.Background()
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()

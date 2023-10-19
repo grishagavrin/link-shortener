@@ -36,6 +36,7 @@ var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
+	CTX          *context.Context
 )
 
 func main() {
@@ -79,7 +80,7 @@ func main() {
 	}
 
 	// Routing app
-	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(stor.Repository, l, chBatch)
 
 	// HTTP server
 	if cfg.EnableHTTPS == "" {

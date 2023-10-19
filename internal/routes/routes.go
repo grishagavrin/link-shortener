@@ -2,8 +2,6 @@
 package routes
 
 import (
-	"context"
-
 	"github.com/go-chi/chi"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/delete"
@@ -13,9 +11,9 @@ import (
 )
 
 // ServiceRouter define routes in server
-func ServiceRouter(ctx context.Context, stor istorage.Repository, l *zap.Logger, chBatch chan istorage.BatchDelete) chi.Router {
+func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorage.BatchDelete) chi.Router {
 	r := chi.NewRouter()
-	h := handlers.New(ctx, stor, l)
+	h := handlers.New(stor, l)
 
 	// Middlewares
 	r.Use(middlewares.GzipMiddleware)
