@@ -41,7 +41,6 @@ var (
 func main() {
 	// Print build info
 	printBuildInfo()
-	// Context with cancel func
 
 	// Logger instance
 	l, err := logger.Instance()
@@ -80,7 +79,7 @@ func main() {
 	}
 
 	// Routing app
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 
 	// HTTP server
 	if cfg.EnableHTTPS == "" {

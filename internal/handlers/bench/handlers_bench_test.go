@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,8 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
+	//создаем контекст
+	ctx := context.Background()
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -29,9 +31,9 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
+	routes := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// создаем handler
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -58,7 +60,8 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
+	//create context
+	ctx := context.Background()
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -66,9 +69,9 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
+	routes := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// создаем handler
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -96,7 +99,8 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
+	//create context
+	ctx := context.Background()
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -104,9 +108,9 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
+	routes := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// создаем handler
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -133,7 +137,8 @@ func BenchmarkHandler_GetUrls(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
+	//create context
+	ctx := context.Background()
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -141,9 +146,9 @@ func BenchmarkHandler_GetUrls(b *testing.B) {
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
 	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
+	routes := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// создаем handler
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers

@@ -21,13 +21,18 @@ import (
 
 // Handler general type fo handler
 type Handler struct {
-	s istorage.Repository
-	l *zap.Logger
+	ctx context.Context
+	s   istorage.Repository
+	l   *zap.Logger
 }
 
 // New allocation new handler
-func New(stor istorage.Repository, l *zap.Logger) *Handler {
-	return &Handler{s: stor, l: l}
+func New(ctx context.Context, stor istorage.Repository, l *zap.Logger) *Handler {
+	return &Handler{
+		ctx: ctx,
+		s:   stor,
+		l:   l,
+	}
 }
 
 // GetLink godoc
@@ -39,7 +44,7 @@ func New(stor istorage.Repository, l *zap.Logger) *Handler {
 // @Router /{id} [get]
 // GetLink get original link
 func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	q := chi.URLParam(req, "id")
@@ -75,7 +80,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 // @Router /api/shorten/batch [post]
 // SaveBatch save data and return multiply
 func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	body, err := io.ReadAll(req.Body)
@@ -140,7 +145,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 // @Router / [post]
 // SaveTXT convert link to shorting and store in database
 func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	// Config instance
@@ -193,7 +198,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 // @Router /api/shorten [post]
 // SaveJSON convert link to shorting and store in database
 func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	// config instance
@@ -261,7 +266,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 // @Router /ping [get]
 // GetPing implement ping connection for sql database storage
 func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	conn, err := storage.SQLDBConnection(h.l)
@@ -286,7 +291,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 // @Router /api/user/urls [get]
 // GetLinks get all urls by user
 func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithCancel(h.ctx)
 	defer cancel()
 
 	userID := middlewares.GetContextUserID(req)

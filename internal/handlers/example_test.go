@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,14 +17,16 @@ func ExampleHandler_SaveTXT() {
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
+	//create context
+	ctx := context.Background()
 	// create logger
 	l, _ := logger.Instance()
 	// create storage
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// handlers
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -41,14 +44,16 @@ func ExampleHandler_SaveJSON() {
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
+	//create context
+	ctx := context.Background()
 	// create logger
 	l, _ := logger.Instance()
 	// create storage
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// handlers
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -66,14 +71,16 @@ func ExampleHandler_GetLink() {
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
+	//create context
+	ctx := context.Background()
 	// create logger
 	l, _ := logger.Instance()
 	// create storage
 	stor, _ := storage.Instance(l, chBatch)
 	// create router
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.ServiceRouter(ctx, stor.Repository, l, chBatch)
 	// handlers
-	h := handlers.New(stor.Repository, l)
+	h := handlers.New(ctx, stor.Repository, l)
 	// create server
 	ts := httptest.NewServer(r)
 	defer ts.Close()
