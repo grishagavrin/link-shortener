@@ -21,7 +21,6 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -58,7 +57,6 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -96,7 +94,6 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -133,7 +130,6 @@ func BenchmarkHandler_GetUrls(b *testing.B) {
 
 	chBatch := make(chan istorage.BatchDelete)
 	defer close(chBatch)
-
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер

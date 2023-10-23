@@ -19,6 +19,7 @@ import (
 
 func TestHandler_GetLink(t *testing.T) {
 	chBatch := make(chan istorage.BatchDelete)
+	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
 	// создаем логер
@@ -30,7 +31,6 @@ func TestHandler_GetLink(t *testing.T) {
 	// создаем сервер
 	ts := httptest.NewServer(r)
 	defer ts.Close()
-	defer close(chBatch)
 
 	// определяем структуру теста
 	type want struct {

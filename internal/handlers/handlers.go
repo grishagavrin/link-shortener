@@ -27,7 +27,10 @@ type Handler struct {
 
 // New allocation new handler
 func New(stor istorage.Repository, l *zap.Logger) *Handler {
-	return &Handler{s: stor, l: l}
+	return &Handler{
+		s: stor,
+		l: l,
+	}
 }
 
 // GetLink godoc
