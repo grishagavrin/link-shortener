@@ -36,7 +36,6 @@ var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
-	CTX          *context.Context
 )
 
 func main() {
