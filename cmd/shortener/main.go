@@ -18,6 +18,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 // @Title Link Shortener API
@@ -69,16 +70,45 @@ func main() {
 	if err != nil {
 		l.Fatal("fatal storage init", zap.Error(err))
 	}
+	// HTTP server
+	if cfg.EnableHTTPS == "" {
+		srv := &http.Server{
+			Addr:    srvAddr,
+			Handler: routes.ServiceRouter(stor.Repository, l, chBatch),
+		}
 
-	srv := &http.Server{
-		Addr:    srvAddr,
-		Handler: routes.ServiceRouter(stor.Repository, l, chBatch),
+		go func() {
+			l.Info("Start HTTP server")
+			err := srv.ListenAndServe()
+			if err != nil {
+				l.Info("app error exit", zap.Error(err))
+				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			}
+		}()
+	} else {
+		// HTTPS server
+		manager := &autocert.Manager{
+			Cache:      autocert.DirCache("cache-dir"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(srvAddr),
+		}
+
+		srv := &http.Server{
+			Addr:      ":443",
+			Handler:   routes.ServiceRouter(stor.Repository, l, chBatch),
+			TLSConfig: manager.TLSConfig(),
+		}
+
+		go func() {
+			l.Info("Start HTTPS server")
+			err := srv.ListenAndServeTLS("server.crt", "server.key")
+			if err != nil {
+				l.Info("app error exit", zap.Error(err))
+				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			}
+		}()
+
 	}
-
-	go func() {
-		l.Fatal("App error exit", zap.Error(srv.ListenAndServe()))
-	}()
-	l.Info("The server is ready")
 
 	// Add context for Graceful shutdown
 	killSignal := <-interrupt

@@ -15,24 +15,26 @@ const (
 	BaseURL         = "BaseURL"
 	FileStoragePath = "FileStoragePath"
 	DatabaseDSN     = "DatabaseDSN"
+	EnableHTTPS     = "EnableHTTPS"
 	LENHASH         = 16
 )
 
 // Config base struct with default initialize
-type myConfig struct {
+type MyConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"../../filedata"`
 	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
+	EnableHTTPS     string `env:"ENABLE_HTTPS" envDefault:""`
 }
 
 // Instance variable of config
-var instance *myConfig
+var instance *MyConfig
 
 // First instance in main func
-func Instance() (*myConfig, error) {
+func Instance() (*MyConfig, error) {
 	if instance == nil {
-		instance = new(myConfig)
+		instance = new(MyConfig)
 		err := instance.initENV()
 		if err != nil {
 			return nil, err
@@ -44,7 +46,7 @@ func Instance() (*myConfig, error) {
 }
 
 // Parse env
-func (c *myConfig) initENV() error {
+func (c *MyConfig) initENV() error {
 	if err := env.Parse(c); err != nil {
 		return fmt.Errorf("%w: %v", errs.ErrENVLoading, err)
 	}
@@ -52,11 +54,12 @@ func (c *myConfig) initENV() error {
 }
 
 // Flag initialize for start app
-func (c *myConfig) initFlags() {
+func (c *MyConfig) initFlags() {
 	aFlag := flag.String("a", "", "")
 	bFlag := flag.String("b", "", "")
 	fFlag := flag.String("f", "", "")
 	dFlag := flag.String("d", "", "")
+	sFlag := flag.String("s", "", "")
 	flag.Parse()
 
 	if *aFlag != "" {
@@ -71,10 +74,13 @@ func (c *myConfig) initFlags() {
 	if *dFlag != "" {
 		c.DatabaseDSN = *dFlag
 	}
+	if *sFlag != "" {
+		c.EnableHTTPS = *sFlag
+	}
 }
 
 // Get param config
-func (c *myConfig) GetCfgValue(env string) (string, error) {
+func (c *MyConfig) GetCfgValue(env string) (string, error) {
 	switch env {
 	case ServerAddress:
 		return c.ServerAddress, nil
@@ -84,6 +90,8 @@ func (c *myConfig) GetCfgValue(env string) (string, error) {
 		return c.FileStoragePath, nil
 	case DatabaseDSN:
 		return c.DatabaseDSN, nil
+	case EnableHTTPS:
+		return c.EnableHTTPS, nil
 	}
 
 	return "", errs.ErrUnknownEnvOrFlag
