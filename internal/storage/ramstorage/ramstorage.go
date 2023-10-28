@@ -242,3 +242,16 @@ func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
 		r.MU.Unlock()
 	}
 }
+
+// GetStats get statistics quantity urls and users
+func (r *RAMStorage) GetStats(_ context.Context, userID istorage.UniqUser) (istorage.GetStatsReqURL, error) {
+	r.MU.Lock()
+	defer r.MU.Unlock()
+
+	stat := istorage.GetStatsReqURL{
+		Users: len(r.DB) - 1,    // because r.DB["all"] must be deleted
+		URLs:  len(r.DB["all"]), // r.DB["all"] contains all hashed links
+	}
+
+	return stat, nil
+}

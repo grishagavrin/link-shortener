@@ -339,3 +339,33 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 	res.Write(body)
 }
+
+// GetStats godoc
+// @Tags GetStats
+// @Summary Request to get statistics quantity urls and users
+// @Failure 400 {string} string "bad request"
+// @Success 200 {string} string
+// @Router /api/internal/stats [get]
+// GetStats get statistics quantity urls and users
+func (h *Handler) GetStats(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	userID := middlewares.GetContextUserID(req)
+
+	foundedStat, err := h.s.GetStats(ctx, istorage.UniqUser(userID))
+	if errors.Is(err, errs.ErrInternalSrv) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body, err := json.Marshal(foundedStat)
+	if err != nil {
+		http.Error(res, errs.ErrJSONMarshall.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res.Header().Add("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
+	res.Write(body)
+}
