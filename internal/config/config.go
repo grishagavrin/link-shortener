@@ -20,6 +20,7 @@ const (
 	FileStoragePath = "FileStoragePath"
 	DatabaseDSN     = "DatabaseDSN"
 	EnableHTTPS     = "EnableHTTPS"
+	TrustedSubnet   = "TRUSTEDSUBNET"
 	LENHASH         = 16
 	Config          = "CONFIG"
 )
@@ -31,6 +32,7 @@ type JSONConfig struct {
 	FileStoragePath string `json:"file_storage_path"`
 	DatabaseDsn     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 // Config base struct with default initialize
@@ -38,8 +40,9 @@ type MyConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"127.0.0.1:8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"../../filedata"`
-	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:"postgresql://postgres:220098@127.0.0.1:5432/golangDB"`
+	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:""`
 	EnableHTTPS     string `env:"ENABLE_HTTPS" envDefault:""`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" envDefault:"127.0.0.1/8"`
 	Config          string `env:"CONFIG" envDefault:""`
 }
 
@@ -125,6 +128,7 @@ func (c *MyConfig) initFlags() {
 	dFlag := flag.String("d", "", "")
 	sFlag := flag.String("s", "", "")
 	cFlag := flag.String("c", "", "")
+	tFlag := flag.String("t", "", "")
 	flag.Parse()
 
 	if *aFlag != "" {
@@ -145,6 +149,9 @@ func (c *MyConfig) initFlags() {
 	if *cFlag != "" {
 		c.Config = *cFlag
 	}
+	if *tFlag != "" {
+		c.TrustedSubnet = *tFlag
+	}
 }
 
 // Get param config
@@ -162,6 +169,8 @@ func (c *MyConfig) GetCfgValue(env string) (string, error) {
 		return c.EnableHTTPS, nil
 	case Config:
 		return c.Config, nil
+	case TrustedSubnet:
+		return c.TrustedSubnet, nil
 	}
 
 	return "", errs.ErrUnknownEnvOrFlag

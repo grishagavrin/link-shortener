@@ -7,6 +7,9 @@ import (
 
 // HTTP Errors
 
+// Invalid IP
+var ErrInvalidIP = errors.New("invalid ip")
+
 // Internal error
 var ErrInternalSrv = errors.New("internal error on server")
 

@@ -45,7 +45,7 @@ type BatchResURL struct {
 }
 
 // GetStatsReqURL request
-type GetStatsReqURL struct {
+type GetStatsResURL struct {
 	URLs  int `json:"urls" example:"12"`
 	Users int `json:"users" example:"5"`
 }
@@ -57,5 +57,5 @@ type Repository interface {
 	LinksByUser(context.Context, UniqUser) (ShortLinks, error)
 	SaveBatch(context.Context, UniqUser, []BatchReqURL) ([]BatchResURL, error)
 	BunchUpdateAsDeleted(chan BatchDelete)
-	GetStats(context.Context, UniqUser) (GetStatsReqURL, error)
+	GetStats(context.Context, UniqUser) (GetStatsResURL, error)
 }

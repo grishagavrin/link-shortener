@@ -228,13 +228,11 @@ func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDele
 }
 
 // GetStats get statistics quantity urls and users
-func (s *PostgreSQLStorage) GetStats(ctx context.Context, userID istorage.UniqUser) (istorage.GetStatsReqURL, error) {
-
-	stat := istorage.GetStatsReqURL{}
+func (s *PostgreSQLStorage) GetStats(ctx context.Context, userID istorage.UniqUser) (istorage.GetStatsResURL, error) {
+	stat := istorage.GetStatsResURL{}
 
 	query := "SELECT count(distinct user_id) as users, count(origin) as urls FROM short_links;"
 	err := s.dbi.QueryRow(ctx, query).Scan(&stat.URLs, &stat.Users)
-
 	if err != nil {
 		return stat, errs.ErrInternalSrv
 	}
