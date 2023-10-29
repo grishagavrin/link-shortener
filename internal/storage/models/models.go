@@ -1,20 +1,6 @@
 // Package models implements Repository pattern
 package models
 
-import (
-	"context"
-)
-
-// Repository interface for working with global storage
-type Repository interface {
-	GetLinkDB(context.Context, ShortURL) (Origin, error)
-	SaveLinkDB(context.Context, UniqUser, Origin) (ShortURL, error)
-	LinksByUser(context.Context, UniqUser) (ShortLinks, error)
-	SaveBatch(context.Context, UniqUser, []BatchReqURL) ([]BatchResURL, error)
-	BunchUpdateAsDeleted(chan BatchDelete)
-	GetStats(context.Context, UniqUser) (GetStatsResURL, error)
-}
-
 // UniqUser unique user type
 type UniqUser string
 

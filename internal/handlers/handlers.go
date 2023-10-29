@@ -15,19 +15,29 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/models"
+	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"go.uber.org/zap"
 )
 
+// Repository interface for working with global storage
+type Repository interface {
+	GetLinkDB(context.Context, models.ShortURL) (models.Origin, error)
+	SaveLinkDB(context.Context, models.UniqUser, models.Origin) (models.ShortURL, error)
+	LinksByUser(context.Context, models.UniqUser) (models.ShortLinks, error)
+	SaveBatch(context.Context, models.UniqUser, []models.BatchReqURL) ([]models.BatchResURL, error)
+	BunchUpdateAsDeleted(chan models.BatchDelete)
+	GetStats(context.Context, models.UniqUser) (models.GetStatsResURL, error)
+}
+
 // Handler general type fo handler
 type Handler struct {
-	s models.Repository
+	s Repository
 	l *zap.Logger
 }
 
 // New allocation new handler
-func New(stor models.Repository, l *zap.Logger) *Handler {
+func New(stor Repository, l *zap.Logger) *Handler {
 	return &Handler{
 		s: stor,
 		l: l,
@@ -268,7 +278,7 @@ func (h *Handler) GetPing(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
-	conn, err := storage.SQLDBConnection(h.l)
+	conn, err := db.SQLDBConnection(h.l)
 	if err == nil {
 		err = conn.Ping(ctx)
 		if err != nil {

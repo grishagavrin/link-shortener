@@ -11,7 +11,7 @@ import (
 )
 
 // ServiceRouter define routes in server
-func ServiceRouter(stor models.Repository, l *zap.Logger, chBatch chan models.BatchDelete) chi.Router {
+func ServiceRouter(stor handlers.Repository, l *zap.Logger, chBatch chan models.BatchDelete) chi.Router {
 	r := chi.NewRouter()
 	h := handlers.New(stor, l)
 
