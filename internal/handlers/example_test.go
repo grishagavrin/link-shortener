@@ -9,11 +9,11 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 )
 
 func ExampleHandler_SaveTXT() {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
 	// create logger
@@ -38,7 +38,7 @@ func ExampleHandler_SaveTXT() {
 }
 
 func ExampleHandler_SaveJSON() {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
 	// create logger
@@ -63,7 +63,7 @@ func ExampleHandler_SaveJSON() {
 }
 
 func ExampleHandler_GetLink() {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	w := httptest.NewRecorder()
 	// create logger

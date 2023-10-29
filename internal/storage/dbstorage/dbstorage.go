@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -20,11 +20,11 @@ import (
 type PostgreSQLStorage struct {
 	dbi     *pgxpool.Pool
 	l       *zap.Logger
-	chBatch chan istorage.BatchDelete
+	chBatch chan models.BatchDelete
 }
 
 // New initialize new table in postgreSQL storage
-func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan istorage.BatchDelete) (*PostgreSQLStorage, error) {
+func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan models.BatchDelete) (*PostgreSQLStorage, error) {
 	// Check if scheme exist
 	sql := `
 	CREATE TABLE IF NOT EXISTS public.short_links(
@@ -52,8 +52,8 @@ func New(dbi *pgxpool.Pool, l *zap.Logger, ch chan istorage.BatchDelete) (*Postg
 }
 
 // GetLinkDB get data from storage by short URL
-func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.ShortURL) (istorage.Origin, error) {
-	var origin istorage.Origin
+func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey models.ShortURL) (models.Origin, error) {
+	var origin models.Origin
 	var gone bool
 
 	query := "SELECT origin, is_deleted FROM public.short_links WHERE short=$1"
@@ -71,18 +71,18 @@ func (s *PostgreSQLStorage) GetLinkDB(ctx context.Context, shortKey istorage.Sho
 }
 
 // LinksByUser return all user links
-func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID istorage.UniqUser) (istorage.ShortLinks, error) {
+func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID models.UniqUser) (models.ShortLinks, error) {
 	query := "SELECT origin, short FROM public.short_links WHERE user_id=$1"
 
-	origins := istorage.ShortLinks{}
+	origins := models.ShortLinks{}
 	rows, err := s.dbi.Query(ctx, query, string(userID))
 	if err != nil {
 		return origins, err
 	}
 
 	for rows.Next() {
-		var origin istorage.Origin
-		var short istorage.ShortURL
+		var origin models.Origin
+		var short models.ShortURL
 
 		err = rows.Scan(&short, &origin)
 		if err != nil {
@@ -95,7 +95,7 @@ func (s *PostgreSQLStorage) LinksByUser(ctx context.Context, userID istorage.Uni
 }
 
 // SaveLinkDB save url in storage of short links
-func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID istorage.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
+func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID models.UniqUser, url models.Origin) (models.ShortURL, error) {
 
 	shortKey, err := utils.RandStringBytes()
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID istorage.Uniq
 	if _, err := s.dbi.Exec(ctx, queryInsert, args); err != nil {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				var short istorage.ShortURL
+				var short models.ShortURL
 				_ = s.dbi.QueryRow(ctx, queryGet, string(url)).Scan(&short)
 
 				return short, errs.ErrAlreadyHasShort
@@ -135,7 +135,7 @@ func (s *PostgreSQLStorage) SaveLinkDB(ctx context.Context, userID istorage.Uniq
 }
 
 // SaveBatch save multiply URL
-func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
+func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID models.UniqUser, urls []models.BatchReqURL) ([]models.BatchResURL, error) {
 	type temp struct{ CorrID, Origin, Short string }
 
 	var buffer []temp
@@ -150,7 +150,7 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqU
 		buffer = append(buffer, t)
 	}
 
-	var shorts []istorage.BatchResURL
+	var shorts []models.BatchResURL
 
 	query := `
 		INSERT INTO public.short_links (user_id, origin, short) 
@@ -175,7 +175,7 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqU
 		}
 
 		if _, err = tx.Exec(ctx, query, args); err == nil {
-			shorts = append(shorts, istorage.BatchResURL{
+			shorts = append(shorts, models.BatchResURL{
 				Short:  v.Short,
 				CorrID: v.CorrID,
 			})
@@ -193,7 +193,7 @@ func (s *PostgreSQLStorage) SaveBatch(ctx context.Context, userID istorage.UniqU
 }
 
 // BunchUpdateAsDeleted delete mass URL by fanIN pattern
-func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
+func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan models.BatchDelete) {
 	for v := range chBatch {
 		if len(v.URLs) == 0 {
 			s.l.Info(errs.ErrCorrelation.Error())
@@ -228,8 +228,8 @@ func (s *PostgreSQLStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDele
 }
 
 // GetStats get statistics quantity urls and users
-func (s *PostgreSQLStorage) GetStats(ctx context.Context, userID istorage.UniqUser) (istorage.GetStatsResURL, error) {
-	stat := istorage.GetStatsResURL{}
+func (s *PostgreSQLStorage) GetStats(ctx context.Context, userID models.UniqUser) (models.GetStatsResURL, error) {
+	stat := models.GetStatsResURL{}
 
 	query := "SELECT count(distinct user_id) as users, count(origin) as urls FROM short_links;"
 	err := s.dbi.QueryRow(ctx, query).Scan(&stat.URLs, &stat.Users)

@@ -6,12 +6,12 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/delete"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 )
 
 // ServiceRouter define routes in server
-func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorage.BatchDelete) chi.Router {
+func ServiceRouter(stor models.Repository, l *zap.Logger, chBatch chan models.BatchDelete) chi.Router {
 	r := chi.NewRouter()
 	h := handlers.New(stor, l)
 

@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 )
 
 // encKey rand key
@@ -97,10 +97,10 @@ func generateRandom(size int) ([]byte, error) {
 }
 
 // RandStringBytes generate random short ulr with 8 lenght
-func RandStringBytes() (istorage.ShortURL, error) {
+func RandStringBytes() (models.ShortURL, error) {
 	b, err := generateRandom(config.LENHASH / 2)
 	if err != nil {
 		return "", err
 	}
-	return istorage.ShortURL(hex.EncodeToString(b)), nil
+	return models.ShortURL(hex.EncodeToString(b)), nil
 }

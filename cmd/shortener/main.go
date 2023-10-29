@@ -17,7 +17,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -70,7 +70,7 @@ func main() {
 	defer cancel()
 
 	// Batch channel for batch delete
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 
 	// Storage instance allocate logger and batch channel
 	stor, err := storage.Instance(l, chBatch)
@@ -97,7 +97,7 @@ func main() {
 func releaseResources(ctx context.Context,
 	l *zap.Logger,
 	stor *storage.InstanceStruct,
-	chBatch chan istorage.BatchDelete,
+	chBatch chan models.BatchDelete,
 	srv *http.Server,
 ) {
 	<-ctx.Done()

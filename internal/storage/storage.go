@@ -9,8 +9,8 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/storage/dbstorage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
-	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -49,12 +49,12 @@ func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 
 // InstanceStruct instance struct for repository & pgpool connection
 type InstanceStruct struct {
-	Repository istorage.Repository
+	Repository models.Repository
 	SQLDB      *pgxpool.Pool
 }
 
 // Instance initialize storage with channel for batch delete
-func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct, error) {
+func Instance(l *zap.Logger, chBatch chan models.BatchDelete) (*InstanceStruct, error) {
 	dbi, err := SQLDBConnection(l)
 	instanceDB := &InstanceStruct{}
 
@@ -73,7 +73,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 		instanceDB.SQLDB = dbi
 		return instanceDB, nil
 	} else {
-		stor, err := ramstorage.New(l, chBatch)
+		stor, err := filestorage.New(l, chBatch)
 		if errors.Is(err, errs.ErrRAMNotAvaliable) {
 			instanceDB.Repository = nil
 			instanceDB.SQLDB = nil

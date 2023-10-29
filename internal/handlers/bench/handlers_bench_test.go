@@ -13,13 +13,13 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 )
 
 func BenchmarkHandler_SaveTXT(b *testing.B) {
 	var r io.Reader
 
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
@@ -55,7 +55,7 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 func BenchmarkHandler_SaveJSON(b *testing.B) {
 	var r io.Reader
 
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 func BenchmarkHandler_SaveBatch(b *testing.B) {
 	var r io.Reader
 
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
@@ -128,7 +128,7 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 func BenchmarkHandler_GetUrls(b *testing.B) {
 	var r io.Reader
 
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()

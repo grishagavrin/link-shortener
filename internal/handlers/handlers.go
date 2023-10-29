@@ -16,18 +16,18 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 )
 
 // Handler general type fo handler
 type Handler struct {
-	s istorage.Repository
+	s models.Repository
 	l *zap.Logger
 }
 
 // New allocation new handler
-func New(stor istorage.Repository, l *zap.Logger) *Handler {
+func New(stor models.Repository, l *zap.Logger) *Handler {
 	return &Handler{
 		s: stor,
 		l: l,
@@ -54,7 +54,7 @@ func (h *Handler) GetLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	h.l.Info("Get ID:", zap.String("id", q))
-	foundedURL, err := h.s.GetLinkDB(ctx, istorage.ShortURL(q))
+	foundedURL, err := h.s.GetLinkDB(ctx, models.ShortURL(q))
 
 	if err != nil {
 		if errors.Is(err, errs.ErrURLIsGone) {
@@ -89,7 +89,7 @@ func (h *Handler) SaveBatch(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get url from json data
-	var urls []istorage.BatchReqURL
+	var urls []models.BatchReqURL
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
 		http.Error(res, fmt.Errorf("%w: %v", errs.ErrJSONUnMarshall, err).Error(), http.StatusBadRequest)
@@ -176,7 +176,7 @@ func (h *Handler) SaveTXT(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	origin, err := h.s.SaveLinkDB(ctx, istorage.UniqUser(userID), istorage.Origin(body))
+	origin, err := h.s.SaveLinkDB(ctx, models.UniqUser(userID), models.Origin(body))
 
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
@@ -234,7 +234,7 @@ func (h *Handler) SaveJSON(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	dbURL, err := h.s.SaveLinkDB(ctx, istorage.UniqUser(userID), istorage.Origin(reqBody.URL))
+	dbURL, err := h.s.SaveLinkDB(ctx, models.UniqUser(userID), models.Origin(reqBody.URL))
 	status := http.StatusCreated
 	if errors.Is(err, errs.ErrAlreadyHasShort) {
 		status = http.StatusConflict
@@ -295,7 +295,7 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 
 	userID := middlewares.GetContextUserID(req)
 
-	links, err := h.s.LinksByUser(ctx, istorage.UniqUser(userID))
+	links, err := h.s.LinksByUser(ctx, models.UniqUser(userID))
 	if err != nil {
 		http.Error(res, errs.ErrNoContent.Error(), http.StatusNoContent)
 		return
@@ -388,7 +388,7 @@ func (h *Handler) GetStats(res http.ResponseWriter, req *http.Request) {
 	userID := middlewares.GetContextUserID(req)
 
 	// get count users and urls from storage
-	foundedStat, err := h.s.GetStats(ctx, istorage.UniqUser(userID))
+	foundedStat, err := h.s.GetStats(ctx, models.UniqUser(userID))
 	if errors.Is(err, errs.ErrInternalSrv) {
 		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
 		return

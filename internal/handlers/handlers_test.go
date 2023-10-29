@@ -12,13 +12,13 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
 func TestHandler_GetLink(t *testing.T) {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаём новый Recorder
 	w := httptest.NewRecorder()
@@ -98,7 +98,7 @@ func TestHandler_GetLink(t *testing.T) {
 }
 
 func TestHandler_SaveTXT(t *testing.T) {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	defer close(chBatch)
 	// создаем логер
 	l, _ := logger.Instance()
@@ -183,7 +183,7 @@ func TestHandler_SaveTXT(t *testing.T) {
 }
 
 func TestHandler_SaveJSON(t *testing.T) {
-	chBatch := make(chan istorage.BatchDelete)
+	chBatch := make(chan models.BatchDelete)
 	// создаем логер
 	l, _ := logger.Instance()
 	// создаем хранение
