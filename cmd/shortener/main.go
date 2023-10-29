@@ -14,6 +14,7 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
+	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
@@ -48,18 +49,6 @@ func main() {
 		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
-	// Config instance
-	cfg, err := config.Instance()
-	if errors.Is(err, errs.ErrENVLoading) {
-		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
-	}
-
-	// Get server address
-	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
-	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
-		l.Fatal("fatal get config value: ", zap.Error(err))
-	}
-
 	// Init context
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -78,17 +67,44 @@ func main() {
 		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
-	// Routing app
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	//Handler
+	h := handlers.New(stor.Repository, l)
 
-	// HTTP server
+	// Routing app
+	r := routes.NewRouterFacade(h, l, chBatch)
+
+	// Start server
+	startServer(ctx, r, l, stor, chBatch)
+}
+
+// start server function
+func startServer(
+	ctx context.Context,
+	r *routes.RouterFacade,
+	l *zap.Logger,
+	stor *storage.InstanceStruct,
+	chBatch chan models.BatchDelete,
+) {
+
+	// Config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		log.Fatal(errs.ErrConfigInstance, zap.Error(err))
+	}
+
+	// Get server address
+	srvAddr, err := cfg.GetCfgValue(config.ServerAddress)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		l.Fatal("fatal get config value: ", zap.Error(err))
+	}
+
 	if cfg.EnableHTTPS == "" {
 		// Start func for HTTP server
-		srv := startHTTPServer(srvAddr, r, l)
+		srv := startHTTPServer(srvAddr, r.HTTPRoute.Route, l)
 		releaseResources(ctx, l, stor, chBatch, srv)
 	} else {
 		// Start func for HTTPS server
-		srv := startHTTPSServer(srvAddr, r, l)
+		srv := startHTTPSServer(srvAddr, r.HTTPRoute.Route, l)
 		releaseResources(ctx, l, stor, chBatch, srv)
 	}
 }

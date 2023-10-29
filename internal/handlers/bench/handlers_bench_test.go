@@ -27,10 +27,11 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
-	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем handler
 	h := handlers.New(stor.Repository, l)
+	// создаем роутер
+	routes := routes.NewRouterFacade(h, l, chBatch)
+
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -42,7 +43,7 @@ func BenchmarkHandler_SaveTXT(b *testing.B) {
 		request := httptest.NewRequest(http.MethodPost, "/", r)
 
 		b.StartTimer()
-		routes.HandleFunc("/", h.SaveTXT)
+		routes.HTTPRoute.Route.HandleFunc("/", h.SaveTXT)
 
 		// запускаем сервер
 		rtr.ServeHTTP(w, request)
@@ -63,10 +64,11 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
-	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем handler
 	h := handlers.New(stor.Repository, l)
+	// создаем роутер
+	routes := routes.NewRouterFacade(h, l, chBatch)
+
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -78,7 +80,7 @@ func BenchmarkHandler_SaveJSON(b *testing.B) {
 		request := httptest.NewRequest(http.MethodPost, "/", r)
 
 		b.StartTimer() //
-		routes.HandleFunc("/", h.SaveJSON)
+		routes.HTTPRoute.Route.HandleFunc("/", h.SaveJSON)
 		// запускаем сервер
 		rtr.ServeHTTP(w, request)
 		res := w.Result()
@@ -100,10 +102,11 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
-	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем handler
 	h := handlers.New(stor.Repository, l)
+	// создаем роутер
+	routes := routes.NewRouterFacade(h, l, chBatch)
+
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -114,7 +117,7 @@ func BenchmarkHandler_SaveBatch(b *testing.B) {
 		request := httptest.NewRequest(http.MethodPost, "/", r)
 
 		b.StartTimer() //
-		routes.HandleFunc("/", h.SaveJSON)
+		routes.HTTPRoute.Route.HandleFunc("/", h.SaveJSON)
 		// запускаем сервер
 		rtr.ServeHTTP(w, request)
 		res := w.Result()
@@ -136,10 +139,11 @@ func BenchmarkHandler_GetUrls(b *testing.B) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
-	// создаем роутер
-	routes := routes.ServiceRouter(stor.Repository, l, chBatch)
 	// создаем handler
 	h := handlers.New(stor.Repository, l)
+	// создаем роутер
+	routes := routes.NewRouterFacade(h, l, chBatch)
+
 	rtr := chi.NewRouter()
 
 	b.ResetTimer() // reset all timers
@@ -150,7 +154,7 @@ func BenchmarkHandler_GetUrls(b *testing.B) {
 		request := httptest.NewRequest(http.MethodGet, "/user/urls", r)
 
 		b.StartTimer() //
-		routes.HandleFunc("/user/urls", h.GetLinks)
+		routes.HTTPRoute.Route.HandleFunc("/user/urls", h.GetLinks)
 		// запускаем сервер
 		rtr.ServeHTTP(w, request)
 		res := w.Result()

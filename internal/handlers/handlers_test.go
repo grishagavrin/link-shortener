@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
@@ -26,10 +27,12 @@ func TestHandler_GetLink(t *testing.T) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
+	// создаем handler
+	h := handlers.New(stor.Repository, l)
 	// создаем роутер
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.NewRouterFacade(h, l, chBatch)
 	// создаем сервер
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.HTTPRoute.Route)
 	defer ts.Close()
 
 	// определяем структуру теста
@@ -104,10 +107,12 @@ func TestHandler_SaveTXT(t *testing.T) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
+	// создаем handler
+	h := handlers.New(stor.Repository, l)
 	// создаем роутер
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.NewRouterFacade(h, l, chBatch)
 	// создаем сервер
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.HTTPRoute.Route)
 	defer ts.Close()
 
 	// определяем структуру теста
@@ -188,10 +193,12 @@ func TestHandler_SaveJSON(t *testing.T) {
 	l, _ := logger.Instance()
 	// создаем хранение
 	stor, _ := storage.Instance(l, chBatch)
+	// создаем handler
+	h := handlers.New(stor.Repository, l)
 	// создаем роутер
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
+	r := routes.NewRouterFacade(h, l, chBatch)
 	// создаем сервер
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.HTTPRoute.Route)
 	defer ts.Close()
 	defer close(chBatch)
 
