@@ -1,0 +1,24 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package api;
+
+
+option go_package = "github.com/grishagavrin/link-shortener/internal/proto";
+
+message GetLinkReq {
+  string id = 1;
+}
+
+message GetLinkRes {
+}
+
+message GetPingRes {
+}
+
+
+
+service apiService {
+  rpc GetLink (GetLinkReq) returns (GetLinkRes) {}
+  rpc GetPing(google.protobuf.Empty) returns(GetPingRes) {}
+}

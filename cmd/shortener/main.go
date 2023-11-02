@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -14,13 +15,16 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
+	"github.com/grishagavrin/link-shortener/internal/grpc_handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/logger"
+	ls "github.com/grishagavrin/link-shortener/internal/proto"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
 	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 )
 
 // @Title Link Shortener API
@@ -67,8 +71,29 @@ func main() {
 		l.Fatal("fatal storage init", zap.Error(err))
 	}
 
-	//Handler
+	// Handlers REST
 	h := handlers.New(stor.Repository, l)
+
+	//grpc
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("cannot create listener: %s", err)
+	}
+
+	serverRegistrar := grpc.NewServer()
+	hGRPC := grpc_handlers.New(stor.Repository, l)
+	// service := &grpc_handlers.GRPCHandlers{}
+	ls.RegisterApiServiceServer(serverRegistrar, hGRPC)
+
+	go func() {
+		fmt.Println("GRPC Started on port 50051")
+		err = serverRegistrar.Serve(lis)
+		if err != nil {
+			log.Fatalf("impossible to serve: %s", err)
+		}
+	}()
+
+	///
 
 	// Routing app
 	r := routes.NewRouterFacade(h, l, chBatch)
