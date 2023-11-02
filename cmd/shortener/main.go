@@ -15,8 +15,8 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
-	"github.com/grishagavrin/link-shortener/internal/grpc_handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers"
+	handlersgrpc "github.com/grishagavrin/link-shortener/internal/handlersGPRC"
 	"github.com/grishagavrin/link-shortener/internal/logger"
 	ls "github.com/grishagavrin/link-shortener/internal/proto"
 	"github.com/grishagavrin/link-shortener/internal/routes"
@@ -81,7 +81,7 @@ func main() {
 	}
 
 	serverRegistrar := grpc.NewServer()
-	hGRPC := grpc_handlers.New(stor.Repository, l)
+	hGRPC := handlersgrpc.New(stor.Repository, l)
 	// service := &grpc_handlers.GRPCHandlers{}
 	ls.RegisterApiServiceServer(serverRegistrar, hGRPC)
 
