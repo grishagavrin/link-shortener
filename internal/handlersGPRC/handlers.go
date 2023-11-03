@@ -29,6 +29,7 @@ type GRPCHandler struct {
 	stor Repository
 }
 
+// New allocation new grpc handler
 func New(stor Repository, l *zap.Logger) *GRPCHandler {
 	return &GRPCHandler{
 		l:    l,
@@ -36,6 +37,7 @@ func New(stor Repository, l *zap.Logger) *GRPCHandler {
 	}
 }
 
+// GetLink get original link
 func (s *GRPCHandler) GetLink(ctx context.Context, url *ls.GetLinkReq) (*ls.GetLinkRes, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -67,6 +69,7 @@ func (s *GRPCHandler) GetLink(ctx context.Context, url *ls.GetLinkReq) (*ls.GetL
 	return &response, nil
 }
 
+// GetPing get ping from db if connected
 func (s *GRPCHandler) GetPing(ctx context.Context, empt *emptypb.Empty) (*ls.GetPingRes, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
