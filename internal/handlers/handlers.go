@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -330,6 +331,70 @@ func (h *Handler) GetLinks(res http.ResponseWriter, req *http.Request) {
 	}
 
 	body, err := json.Marshal(lks)
+	if err != nil {
+		http.Error(res, errs.ErrJSONMarshall.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res.Header().Add("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
+	res.Write(body)
+}
+
+// GetStats godoc
+// @Tags GetStats
+// @Summary Request to get statistics quantity urls and users
+// @Failure 403 {string} string "status forbidden"
+// @Success 200 {object} object
+// @Router /api/internal/stats [get]
+// GetStats get statistics quantity urls and users
+func (h *Handler) GetStats(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+
+	// config instance
+	cfg, err := config.Instance()
+	if errors.Is(err, errs.ErrENVLoading) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// config value
+	trustedCIDR, err := cfg.GetCfgValue(config.TrustedSubnet)
+	if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// check if config value is empty, then endpoint blocked
+	if trustedCIDR == "" {
+		http.Error(res, errs.ErrInvalidIP.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// get ip from header and parse with
+	ipHeader := req.Header.Get("X-Real-IP")
+	ip := net.ParseIP(ipHeader)
+	_, privateCIDR, _ := net.ParseCIDR(trustedCIDR)
+
+	// check if subnet contains ip
+	private := privateCIDR.Contains(ip)
+
+	if !private {
+		res.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	userID := middlewares.GetContextUserID(req)
+
+	// get count users and urls from storage
+	foundedStat, err := h.s.GetStats(ctx, istorage.UniqUser(userID))
+	if errors.Is(err, errs.ErrInternalSrv) {
+		http.Error(res, errs.ErrInternalSrv.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body, err := json.Marshal(foundedStat)
 	if err != nil {
 		http.Error(res, errs.ErrJSONMarshall.Error(), http.StatusInternalServerError)
 		return

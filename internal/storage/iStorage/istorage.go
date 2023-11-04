@@ -32,16 +32,22 @@ type BatchDelete struct {
 	URLs   []string
 }
 
-// BatchReqURL example
+// BatchReqURL request
 type BatchReqURL struct {
 	CorrID string `json:"correlation_id" example:"1237978947"`
 	Origin string `json:"original_url" example:"http://yandex.ru"`
 }
 
-// BatchResURL response struct
+// BatchResURL response
 type BatchResURL struct {
 	CorrID string `json:"correlation_id"`
 	Short  string `json:"short_url"`
+}
+
+// GetStatsReqURL request
+type GetStatsResURL struct {
+	URLs  int `json:"urls" example:"12"`
+	Users int `json:"users" example:"5"`
 }
 
 // Repository interface for working with global repository
@@ -51,4 +57,5 @@ type Repository interface {
 	LinksByUser(context.Context, UniqUser) (ShortLinks, error)
 	SaveBatch(context.Context, UniqUser, []BatchReqURL) ([]BatchResURL, error)
 	BunchUpdateAsDeleted(chan BatchDelete)
+	GetStats(context.Context, UniqUser) (GetStatsResURL, error)
 }

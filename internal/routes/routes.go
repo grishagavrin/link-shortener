@@ -26,6 +26,7 @@ func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorag
 	r.Get("/ping", h.GetPing)
 	r.Post("/api/shorten/batch", h.SaveBatch)
 	r.Delete("/api/user/urls", delete.New(l, chBatch).ServeHTTP)
+	r.Get("/api/internal/stats", h.GetStats)
 
 	return r
 }
