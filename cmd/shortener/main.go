@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -14,12 +15,16 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
+	"github.com/grishagavrin/link-shortener/internal/handlers"
+	handlersgrpc "github.com/grishagavrin/link-shortener/internal/handlersGPRC"
 	"github.com/grishagavrin/link-shortener/internal/logger"
+	ls "github.com/grishagavrin/link-shortener/internal/proto"
 	"github.com/grishagavrin/link-shortener/internal/routes"
 	"github.com/grishagavrin/link-shortener/internal/storage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 )
 
 // @Title Link Shortener API
@@ -48,6 +53,47 @@ func main() {
 		log.Fatal("fatal logger:", zap.Error(err))
 	}
 
+	// Init context
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer cancel()
+
+	// Batch channel for batch delete
+	chBatch := make(chan models.BatchDelete)
+
+	// Storage instance allocate logger and batch channel
+	stor, err := storage.Instance(l, chBatch)
+	if err != nil {
+		l.Fatal("fatal storage init", zap.Error(err))
+	}
+
+	// Handlers REST
+	h := handlers.New(stor.Repository, l)
+	// Handlers GRPC
+	hGRPC := handlersgrpc.New(stor.Repository, l)
+	// Routing app
+	r := routes.NewRouterFacade(h, l, chBatch)
+
+	// Start server
+	startServer(ctx, r, l, stor, chBatch, hGRPC)
+}
+
+// start server function
+func startServer(
+	ctx context.Context,
+	r *routes.RouterFacade,
+	l *zap.Logger,
+	stor *storage.InstanceStruct,
+	chBatch chan models.BatchDelete,
+	hGRPC *handlersgrpc.GRPCHandler,
+) {
+	// Start GRPC Server
+	startGRPCServer(hGRPC)
+
 	// Config instance
 	cfg, err := config.Instance()
 	if errors.Is(err, errs.ErrENVLoading) {
@@ -60,44 +106,42 @@ func main() {
 		l.Fatal("fatal get config value: ", zap.Error(err))
 	}
 
-	// Init context
-	ctx, cancel := signal.NotifyContext(
-		context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	defer cancel()
-
-	// Batch channel for batch delete
-	chBatch := make(chan istorage.BatchDelete)
-
-	// Storage instance allocate logger and batch channel
-	stor, err := storage.Instance(l, chBatch)
-	if err != nil {
-		l.Fatal("fatal storage init", zap.Error(err))
-	}
-
-	// Routing app
-	r := routes.ServiceRouter(stor.Repository, l, chBatch)
-
-	// HTTP server
 	if cfg.EnableHTTPS == "" {
 		// Start func for HTTP server
-		srv := startHTTPServer(srvAddr, r, l)
+		srv := startHTTPServer(srvAddr, r.HTTPRoute.Route, l)
 		releaseResources(ctx, l, stor, chBatch, srv)
 	} else {
 		// Start func for HTTPS server
-		srv := startHTTPSServer(srvAddr, r, l)
+		srv := startHTTPSServer(srvAddr, r.HTTPRoute.Route, l)
 		releaseResources(ctx, l, stor, chBatch, srv)
 	}
+
+}
+
+// Start GRPC Server
+func startGRPCServer(hGRPC *handlersgrpc.GRPCHandler) {
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("cannot create listener: %s", err)
+	}
+
+	serverRegistrar := grpc.NewServer()
+	ls.RegisterApiServiceServer(serverRegistrar, hGRPC)
+
+	go func() {
+		fmt.Println("GRPC Started on port 50051")
+		err = serverRegistrar.Serve(lis)
+		if err != nil {
+			log.Fatalf("impossible to serve: %s", err)
+		}
+	}()
 }
 
 // Release of resources app
 func releaseResources(ctx context.Context,
 	l *zap.Logger,
 	stor *storage.InstanceStruct,
-	chBatch chan istorage.BatchDelete,
+	chBatch chan models.BatchDelete,
 	srv *http.Server,
 ) {
 	<-ctx.Done()

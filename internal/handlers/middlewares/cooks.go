@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grishagavrin/link-shortener/internal/logger"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
@@ -51,7 +51,7 @@ func CooksMiddleware(next http.Handler) http.Handler {
 }
 
 // GetContextUserID return uniq user id from session
-func GetContextUserID(req *http.Request) istorage.UniqUser {
+func GetContextUserID(req *http.Request) models.UniqUser {
 	userIDCtx := req.Context().Value(UserIDCtxName)
 	userID := "all"
 	if userIDCtx != nil {
@@ -59,5 +59,5 @@ func GetContextUserID(req *http.Request) istorage.UniqUser {
 		userID = userIDCtx.(string)
 	}
 
-	return istorage.UniqUser(userID)
+	return models.UniqUser(userID)
 }

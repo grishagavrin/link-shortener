@@ -6,14 +6,19 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/handlers/delete"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 )
 
+// HTTPRoute struct for return constructor.
+type HTTPRoute struct {
+	Route *chi.Mux
+}
+
 // ServiceRouter define routes in server
-func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorage.BatchDelete) chi.Router {
+func NewHTTPRouter(h *handlers.Handler, l *zap.Logger, chBatch chan models.BatchDelete) HTTPRoute {
 	r := chi.NewRouter()
-	h := handlers.New(stor, l)
+	//  h := handlers.New(stor, l)
 
 	// Middlewares
 	r.Use(middlewares.GzipMiddleware)
@@ -28,5 +33,7 @@ func ServiceRouter(stor istorage.Repository, l *zap.Logger, chBatch chan istorag
 	r.Delete("/api/user/urls", delete.New(l, chBatch).ServeHTTP)
 	r.Get("/api/internal/stats", h.GetStats)
 
-	return r
+	return HTTPRoute{
+		Route: r,
+	}
 }

@@ -1,9 +1,5 @@
-// Package istorage implements Repository pattern
-package istorage
-
-import (
-	"context"
-)
+// Package models implements Repository pattern
+package models
 
 // UniqUser unique user type
 type UniqUser string
@@ -48,14 +44,4 @@ type BatchResURL struct {
 type GetStatsResURL struct {
 	URLs  int `json:"urls" example:"12"`
 	Users int `json:"users" example:"5"`
-}
-
-// Repository interface for working with global repository
-type Repository interface {
-	GetLinkDB(context.Context, ShortURL) (Origin, error)
-	SaveLinkDB(context.Context, UniqUser, Origin) (ShortURL, error)
-	LinksByUser(context.Context, UniqUser) (ShortLinks, error)
-	SaveBatch(context.Context, UniqUser, []BatchReqURL) ([]BatchResURL, error)
-	BunchUpdateAsDeleted(chan BatchDelete)
-	GetStats(context.Context, UniqUser) (GetStatsResURL, error)
 }

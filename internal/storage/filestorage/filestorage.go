@@ -1,5 +1,5 @@
-// Package ramstorage contains methods for file storage
-package ramstorage
+// Package filestorage contains methods for file storage
+package filestorage
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/storage/filewrapper"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"github.com/grishagavrin/link-shortener/internal/utils"
 	"go.uber.org/zap"
 )
@@ -18,15 +18,15 @@ import (
 // RAMStorage for file storage
 type RAMStorage struct {
 	MU      sync.Mutex
-	DB      map[istorage.UniqUser]istorage.ShortLinksRAM
+	DB      map[models.UniqUser]models.ShortLinksRAM
 	l       *zap.Logger
-	chBatch chan istorage.BatchDelete
+	chBatch chan models.BatchDelete
 }
 
 // New instance new storage wit not null fields
-func New(l *zap.Logger, ch chan istorage.BatchDelete) (*RAMStorage, error) {
+func New(l *zap.Logger, ch chan models.BatchDelete) (*RAMStorage, error) {
 	r := &RAMStorage{
-		DB:      make(map[istorage.UniqUser]istorage.ShortLinksRAM),
+		DB:      make(map[models.UniqUser]models.ShortLinksRAM),
 		l:       l,
 		chBatch: ch,
 	}
@@ -57,8 +57,8 @@ func (r *RAMStorage) Load() error {
 }
 
 // LinksByUser return all user links
-func (r *RAMStorage) LinksByUser(_ context.Context, userID istorage.UniqUser) (istorage.ShortLinks, error) {
-	shorts := istorage.ShortLinks{}
+func (r *RAMStorage) LinksByUser(_ context.Context, userID models.UniqUser) (models.ShortLinks, error) {
+	shorts := models.ShortLinks{}
 	shortsRAM, ok := r.DB[userID]
 	if !ok {
 		return nil, errs.ErrNotFoundURL
@@ -72,7 +72,7 @@ func (r *RAMStorage) LinksByUser(_ context.Context, userID istorage.UniqUser) (i
 }
 
 // SaveLinkDB save url in storage of short links
-func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url istorage.Origin) (istorage.ShortURL, error) {
+func (r *RAMStorage) SaveLinkDB(_ context.Context, userID models.UniqUser, url models.Origin) (models.ShortURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
@@ -81,8 +81,8 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 		return "", err
 	}
 
-	currentURLUserRes := istorage.ShortLinks{}
-	currentURLUserRAM := istorage.ShortLinksRAM{}
+	currentURLUserRes := models.ShortLinks{}
+	currentURLUserRAM := models.ShortLinksRAM{}
 
 	if urls, ok := r.DB[userID]; ok {
 		for k, v := range urls {
@@ -93,7 +93,7 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 		currentURLUserRAM = urls
 	}
 
-	currentURLUserRAM[shortKey] = istorage.OriginRAM{
+	currentURLUserRAM[shortKey] = models.OriginRAM{
 		Origin:    url,
 		IsDeleted: false,
 	}
@@ -101,8 +101,8 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 
 	r.DB[userID] = currentURLUserRAM
 
-	currentURLAllRes := istorage.ShortLinks{}
-	currentURLAllRAM := istorage.ShortLinksRAM{}
+	currentURLAllRes := models.ShortLinks{}
+	currentURLAllRAM := models.ShortLinksRAM{}
 
 	if urls, ok := r.DB["all"]; ok {
 		for k, v := range urls {
@@ -113,7 +113,7 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 		currentURLAllRAM = urls
 	}
 
-	currentURLAllRAM[shortKey] = istorage.OriginRAM{
+	currentURLAllRAM[shortKey] = models.OriginRAM{
 		Origin:    url,
 		IsDeleted: false,
 	}
@@ -135,7 +135,7 @@ func (r *RAMStorage) SaveLinkDB(_ context.Context, userID istorage.UniqUser, url
 }
 
 // GetLinkDB get data from storage by short URL
-func (r *RAMStorage) GetLinkDB(_ context.Context, key istorage.ShortURL) (istorage.Origin, error) {
+func (r *RAMStorage) GetLinkDB(_ context.Context, key models.ShortURL) (models.Origin, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
@@ -155,14 +155,14 @@ func (r *RAMStorage) GetLinkDB(_ context.Context, key istorage.ShortURL) (istora
 }
 
 // SaveBatch save multiply URL
-func (r *RAMStorage) SaveBatch(_ context.Context, userID istorage.UniqUser, urls []istorage.BatchReqURL) ([]istorage.BatchResURL, error) {
+func (r *RAMStorage) SaveBatch(_ context.Context, userID models.UniqUser, urls []models.BatchReqURL) ([]models.BatchResURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
-	var shortsRes []istorage.BatchResURL
+	var shortsRes []models.BatchResURL
 
-	currentURLUserRAM := istorage.ShortLinksRAM{}
-	currentURLAllRAM := istorage.ShortLinksRAM{}
+	currentURLUserRAM := models.ShortLinksRAM{}
+	currentURLAllRAM := models.ShortLinksRAM{}
 
 	if r.DB["all"] != nil && r.DB[userID] != nil {
 		currentURLAllRAM = r.DB["all"]
@@ -172,21 +172,21 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID istorage.UniqUser, urls
 	for _, url := range urls {
 		shortKey, _ := utils.RandStringBytes()
 
-		currentURLUserRAM[shortKey] = istorage.OriginRAM{
-			Origin:    istorage.Origin(url.Origin),
+		currentURLUserRAM[shortKey] = models.OriginRAM{
+			Origin:    models.Origin(url.Origin),
 			IsDeleted: false,
 		}
 
 		r.DB[userID] = currentURLUserRAM
 
-		currentURLAllRAM[shortKey] = istorage.OriginRAM{
-			Origin:    istorage.Origin(url.Origin),
+		currentURLAllRAM[shortKey] = models.OriginRAM{
+			Origin:    models.Origin(url.Origin),
 			IsDeleted: false,
 		}
 
 		r.DB["all"] = currentURLAllRAM
 
-		resItem := istorage.BatchResURL{
+		resItem := models.BatchResURL{
 			CorrID: url.CorrID,
 			Short:  string(shortKey),
 		}
@@ -208,7 +208,7 @@ func (r *RAMStorage) SaveBatch(_ context.Context, userID istorage.UniqUser, urls
 }
 
 // BunchUpdateAsDeleted delete mass URL by fanIN pattern
-func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
+func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan models.BatchDelete) {
 	for v := range chBatch {
 		r.MU.Lock()
 
@@ -224,18 +224,18 @@ func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
 			r.l.Info(errs.ErrCorrelation.Error())
 		}
 
-		shortUser := r.DB[istorage.UniqUser(v.UserID)]
+		shortUser := r.DB[models.UniqUser(v.UserID)]
 		shortAll := r.DB["all"]
 
 		for _, v := range v.URLs {
-			if su, ok := shortUser[istorage.ShortURL(v)]; ok {
+			if su, ok := shortUser[models.ShortURL(v)]; ok {
 				su.IsDeleted = true
-				shortUser[istorage.ShortURL(v)] = su
+				shortUser[models.ShortURL(v)] = su
 			}
 
-			if sa, ok := shortAll[istorage.ShortURL(v)]; ok {
+			if sa, ok := shortAll[models.ShortURL(v)]; ok {
 				sa.IsDeleted = true
-				shortAll[istorage.ShortURL(v)] = sa
+				shortAll[models.ShortURL(v)] = sa
 			}
 		}
 		_ = filewrapper.Write(fs, r.DB)
@@ -244,11 +244,11 @@ func (r *RAMStorage) BunchUpdateAsDeleted(chBatch chan istorage.BatchDelete) {
 }
 
 // GetStats get statistics quantity urls and users
-func (r *RAMStorage) GetStats(_ context.Context, userID istorage.UniqUser) (istorage.GetStatsResURL, error) {
+func (r *RAMStorage) GetStats(_ context.Context, userID models.UniqUser) (models.GetStatsResURL, error) {
 	r.MU.Lock()
 	defer r.MU.Unlock()
 
-	return istorage.GetStatsResURL{
+	return models.GetStatsResURL{
 		Users: len(r.DB) - 1,    // because r.DB["all"] must be deleted
 		URLs:  len(r.DB["all"]), // r.DB["all"] contains all hashed links
 	}, nil

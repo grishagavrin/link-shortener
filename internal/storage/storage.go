@@ -2,60 +2,27 @@
 package storage
 
 import (
-	"context"
 	"errors"
-	"fmt"
 
-	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
+	"github.com/grishagavrin/link-shortener/internal/handlers"
 	"github.com/grishagavrin/link-shortener/internal/storage/dbstorage"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
-	"github.com/grishagavrin/link-shortener/internal/storage/ramstorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/filestorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
+	"github.com/grishagavrin/link-shortener/internal/utils/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-var instance *pgxpool.Pool
-
-// SQLDBConnection create pgx pool connection
-func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
-	if instance == nil {
-		// config instance
-		cfg, err := config.Instance()
-		if errors.Is(err, errs.ErrENVLoading) {
-			return nil, errs.ErrDatabaseNotAvaliable
-		}
-
-		// dsn config value
-		dsn, err := cfg.GetCfgValue(config.DatabaseDSN)
-		if errors.Is(err, errs.ErrUnknownEnvOrFlag) {
-			return nil, errs.ErrDatabaseNotAvaliable
-		}
-
-		if dsn == "" {
-			return nil, errs.ErrDatabaseNotAvaliable
-		}
-
-		inst, err := pgxpool.New(context.Background(), dsn)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", errs.ErrDatabaseNotAvaliable, err)
-		}
-
-		instance = inst
-	}
-
-	return instance, nil
-}
-
 // InstanceStruct instance struct for repository & pgpool connection
 type InstanceStruct struct {
-	Repository istorage.Repository
+	Repository handlers.Repository
 	SQLDB      *pgxpool.Pool
 }
 
 // Instance initialize storage with channel for batch delete
-func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct, error) {
-	dbi, err := SQLDBConnection(l)
+func Instance(l *zap.Logger, chBatch chan models.BatchDelete) (*InstanceStruct, error) {
+	dbi, err := db.SQLDBConnection(l)
 	instanceDB := &InstanceStruct{}
 
 	if err == nil {
@@ -73,7 +40,7 @@ func Instance(l *zap.Logger, chBatch chan istorage.BatchDelete) (*InstanceStruct
 		instanceDB.SQLDB = dbi
 		return instanceDB, nil
 	} else {
-		stor, err := ramstorage.New(l, chBatch)
+		stor, err := filestorage.New(l, chBatch)
 		if errors.Is(err, errs.ErrRAMNotAvaliable) {
 			instanceDB.Repository = nil
 			instanceDB.SQLDB = nil

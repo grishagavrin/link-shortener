@@ -8,18 +8,18 @@ import (
 
 	"github.com/grishagavrin/link-shortener/internal/errs"
 	"github.com/grishagavrin/link-shortener/internal/handlers/middlewares"
-	istorage "github.com/grishagavrin/link-shortener/internal/storage/iStorage"
+	"github.com/grishagavrin/link-shortener/internal/storage/models"
 	"go.uber.org/zap"
 )
 
 // Handler struct for delete batch
 type Handler struct {
 	l       *zap.Logger
-	chBatch chan istorage.BatchDelete
+	chBatch chan models.BatchDelete
 }
 
 // New instance of deleted handler
-func New(l *zap.Logger, chBatch chan istorage.BatchDelete) *Handler {
+func New(l *zap.Logger, chBatch chan models.BatchDelete) *Handler {
 	return &Handler{
 		l,
 		chBatch,
@@ -57,7 +57,7 @@ func (h Handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusAccepted)
 
-	chStruct := istorage.BatchDelete{
+	chStruct := models.BatchDelete{
 		UserID: string(userID),
 		URLs:   correlationIDs,
 	}

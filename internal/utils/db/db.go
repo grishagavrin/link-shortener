@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/grishagavrin/link-shortener/internal/config"
 	"github.com/grishagavrin/link-shortener/internal/errs"
@@ -13,8 +14,8 @@ import (
 
 var instance *pgxpool.Pool
 
-// Instance connection instance
-func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
+// SQLDBConnection connection instance
+func SQLDBConnection(l *zap.Logger) (*pgxpool.Pool, error) {
 	if instance == nil {
 		// Config instance
 		cfg, err := config.Instance()
@@ -34,11 +35,10 @@ func Instance(l *zap.Logger) (*pgxpool.Pool, error) {
 
 		inst, err := pgxpool.New(context.Background(), dsn)
 		if err != nil {
-			return instance, err
+			return nil, fmt.Errorf("%w: %v", errs.ErrDatabaseNotAvaliable, err)
 		}
 
 		instance = inst
-		l.Info("Connecting to DB")
 	}
 
 	return instance, nil
