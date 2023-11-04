@@ -73,33 +73,13 @@ func main() {
 
 	// Handlers REST
 	h := handlers.New(stor.Repository, l)
-
-	//grpc
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("cannot create listener: %s", err)
-	}
-
-	serverRegistrar := grpc.NewServer()
+	// Handlers GRPC
 	hGRPC := handlersgrpc.New(stor.Repository, l)
-	// service := &grpc_handlers.GRPCHandlers{}
-	ls.RegisterApiServiceServer(serverRegistrar, hGRPC)
-
-	go func() {
-		fmt.Println("GRPC Started on port 50051")
-		err = serverRegistrar.Serve(lis)
-		if err != nil {
-			log.Fatalf("impossible to serve: %s", err)
-		}
-	}()
-
-	///
-
 	// Routing app
 	r := routes.NewRouterFacade(h, l, chBatch)
 
 	// Start server
-	startServer(ctx, r, l, stor, chBatch)
+	startServer(ctx, r, l, stor, chBatch, hGRPC)
 }
 
 // start server function
@@ -109,7 +89,10 @@ func startServer(
 	l *zap.Logger,
 	stor *storage.InstanceStruct,
 	chBatch chan models.BatchDelete,
+	hGRPC *handlersgrpc.GRPCHandler,
 ) {
+	// Start GRPC Server
+	startGRPCServer(hGRPC)
 
 	// Config instance
 	cfg, err := config.Instance()
@@ -132,6 +115,26 @@ func startServer(
 		srv := startHTTPSServer(srvAddr, r.HTTPRoute.Route, l)
 		releaseResources(ctx, l, stor, chBatch, srv)
 	}
+
+}
+
+// Start GRPC Server
+func startGRPCServer(hGRPC *handlersgrpc.GRPCHandler) {
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("cannot create listener: %s", err)
+	}
+
+	serverRegistrar := grpc.NewServer()
+	ls.RegisterApiServiceServer(serverRegistrar, hGRPC)
+
+	go func() {
+		fmt.Println("GRPC Started on port 50051")
+		err = serverRegistrar.Serve(lis)
+		if err != nil {
+			log.Fatalf("impossible to serve: %s", err)
+		}
+	}()
 }
 
 // Release of resources app
